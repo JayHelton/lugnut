@@ -6,7 +6,7 @@ description = "Coming Soon"
 homepage = "https://github.com/JayHelton/lugnut"
 documentation = "https://github.com/JayHelton/lugnut"
 readme = "README.md"
-authors = ["jayhelton <jarrett.helton@auth0.com>"]
+authors = ["jayhelton <jaydhelton@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
