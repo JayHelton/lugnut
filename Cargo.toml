@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "Coming Soon"
 homepage = "https://github.com/JayHelton/lugnut"
 documentation = "https://github.com/JayHelton/lugnut"
-readme = "https://github.com/JayHelton/lugnut"
+readme = "README.md"
 authors = ["jayhelton <jarrett.helton@auth0.com>"]
 edition = "2018"
 
