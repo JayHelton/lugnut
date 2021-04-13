@@ -1,6 +1,7 @@
 [package]
 name = "lugnut"
 version = "0.0.1"
+license = "MIT"
 description = "Coming Soon"
 homepage = "https://github.com/JayHelton/lugnut"
 documentation = "https://github.com/JayHelton/lugnut"
