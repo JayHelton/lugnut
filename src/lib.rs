@@ -1,13 +1,5 @@
 use hmac::{
     crypto_mac::InvalidKeyLength,
-    digest::{
-        consts::{B0, B1},
-        generic_array::{
-            typenum::{UInt, UTerm},
-            ArrayLength, GenericArray,
-        },
-        BlockInput, FixedOutput, Reset, Update,
-    },
     Hmac, Mac, NewMac,
 };
 use sha1::Sha1;
