@@ -20,13 +20,6 @@ pub enum Algorithm {
     // Sha512,
 }
 
-// pub enum Encoding {
-//     Ascii,
-//     Hex,
-//     Base32,
-//     Base64,
-// }
-
 pub fn digest(
     secret: String,
     counter: u128,
@@ -37,9 +30,16 @@ pub fn digest(
         Err(e) => return Err(e),
     };
 
+    let mut buf = vec![0; 8];
+    let mut tmp = counter;
+    for i in 0 ..8 {
+      buf[7 - i] = (tmp & 0xff) as u8;
+      tmp = tmp >> 8;
+    }
+
     match mac {
         HmacFunction::Sha1(mut _mac) => {
-            _mac.update(b"input mdddessage");
+            _mac.update(&buf);
             Ok(_mac.finalize().into_bytes().to_vec())
         }
     }
@@ -51,7 +51,7 @@ pub fn get_otp_auth_url() {}
 fn get_hmac(
     secret: String,
     algorithm: Algorithm,
-) -> Result<HmacFunction<HmacSha1>, InvalidKeyLength> {
+) -> std::result::Result<HmacFunction<HmacSha1>, InvalidKeyLength> {
     let hash = match algorithm {
         Algorithm::Sha1 => {
             let hmac = match HmacSha1::new_varkey(secret.as_bytes()) {
@@ -73,7 +73,6 @@ mod digest_tests {
         let test = digest(
             "My secret".to_string(),
             5000,
-            crate::Encoding::Ascii,
             crate::Algorithm::Sha1,
         );
         match test {
