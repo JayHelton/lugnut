@@ -3,6 +3,7 @@ use hmac::{crypto_mac, Hmac, Mac, NewMac};
 use rand;
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
+use std::fmt;
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 
@@ -37,6 +38,26 @@ pub struct SecretKey {
     hex: Option<String>,
     base32: Option<String>,
     otpauth_url: Option<String>,
+}
+
+impl fmt::Display for SecretKey {
+    #[doc(inline)]
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut str = "";
+        match &self.ascii {
+            Some(a) => fmt.write_str(&format!("ASCII: {}\n", a)),
+            None => fmt.write_str("No ASCII representation.\n"),
+        };
+        match &self.hex {
+            Some(h) => fmt.write_str(&format!("Hex: {}\n", h)),
+            None => fmt.write_str("No Hex representation.\n"),
+        };
+        match &self.base32 {
+            Some(b) => fmt.write_str(&format!("Base32: {}\n", b)),
+            None => fmt.write_str("No Base32 representation.\n"),
+        };
+        Ok(())
+    }
 }
 
 impl SecretKey {
@@ -284,7 +305,7 @@ mod generate_secret_tests {
 
     #[test]
     fn test_generate_secret_non_default_symbols() {
-        let secret_key = generate_secret(Some(2000), Some(false));
+        let secret_key = generate_secret(Some(100), Some(false));
         let ascii = match secret_key.ascii {
             Some(a) => a,
             None => String::new(),
