@@ -108,6 +108,17 @@ impl SecretKey {
     }
 }
 
+static CHAR_SET: [char; 62] = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I',
+    'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b',
+    'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
+    'v', 'w', 'x', 'y', 'z',
+];
+static SYMBOL_SET: [char; 22] = [
+    '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '<', '>', '?', '/', '[', ']', '{', '}', ',',
+    '.', ':', ';',
+];
+
 /// Applys a specified keyed hashing function (hmac).
 ///
 /// # Arguments
@@ -205,18 +216,6 @@ fn generate_secret_ascii(length: Option<u32>, symbols: bool) -> String {
     let byte_array: Vec<u8> = (0..byte_array_length)
         .map(|_| rand::random::<u8>())
         .collect();
-
-    // Static for efficiency rather than leaving it to runtime to init a vector of chars
-    static CHAR_SET: [char; 62] = [
-        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-        'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
-        's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    ];
-    static SYMBOL_SET: [char; 22] = [
-        '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '<', '>', '?', '/', '[', ']', '{', '}',
-        ',', '.', ':', ';',
-    ];
 
     let mut secret: String = String::from("");
     for (_, value) in byte_array.iter().enumerate() {
