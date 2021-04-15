@@ -1,11 +1,10 @@
+use data_encoding::{BASE32, HEXUPPER};
 use hmac::{crypto_mac, Hmac, Mac, NewMac};
+use rand;
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
 use thiserror::Error;
-use rand::Rng;
-
-mod totp;
-mod hotp;
+use url::form_urlencoded::byte_serialize;
 
 type HmacSha1 = Hmac<Sha1>;
 type HmacSha256 = Hmac<Sha256>;
@@ -37,7 +36,55 @@ pub struct SecretKey {
     ascii: Option<String>,
     hex: Option<String>,
     base32: Option<String>,
-    otpauth_url: Option<String>
+    otpauth_url: Option<String>,
+}
+
+impl SecretKey {
+    #[doc(inline)]
+    fn new() -> Self {
+        SecretKey {
+            ascii: None,
+            hex: None,
+            base32: None,
+            otpauth_url: None,
+        }
+    }
+    #[doc(inline)]
+    fn with_ascii(a: String) -> Self {
+        SecretKey {
+            ascii: Some(a),
+            hex: None,
+            base32: None,
+            otpauth_url: None,
+        }
+    }
+    #[doc(inline)]
+    fn with_hex(h: String) -> Self {
+        SecretKey {
+            ascii: None,
+            hex: Some(h),
+            base32: None,
+            otpauth_url: None,
+        }
+    }
+    #[doc(inline)]
+    fn with_base_32(b: String) -> Self {
+        SecretKey {
+            ascii: None,
+            hex: None,
+            base32: Some(b),
+            otpauth_url: None,
+        }
+    }
+    #[doc(inline)]
+    fn core(a: String, h: String, b: String) -> Self {
+        SecretKey {
+            ascii: Some(a),
+            hex: Some(h),
+            base32: Some(b),
+            otpauth_url: None,
+        }
+    }
 }
 
 /// Applys a specified keyed hashing function (hmac).
@@ -86,7 +133,33 @@ pub fn digest(
     })
 }
 
-pub fn generate_secret() {}
+/// Generates a SecretKey with ASCII, Hex, and Base32 representations of the secret key
+///
+/// # Arguments
+///
+/// * `length` - Optional parameter that defines the length of the secret key (default: 32)
+/// * `symbols` - Optional parameter that dictates whether symbols are allowed in the secret key (default: true)
+///
+/// # Examples
+///
+/// ```
+/// use lugnut::{ generate_secret, SecretKey };
+/// let secret_key = generate_secret(Some(200), Some(false)); // Secret key of length 200, no symbols allowed
+/// let secret_key = generate_secret(Some(100), None); // Secret key of length 100, symbols allows
+/// let secret_key = generate_secret(None, Some(true)); // Secret key of length 32, symbols allows
+/// ```
+pub fn generate_secret(length: Option<u32>, symbols: Option<bool>) -> SecretKey {
+    let defined_symbols = match symbols {
+        Some(s) => s,
+        None => true,
+    };
+    let key = generate_secret_ascii(length, defined_symbols);
+    let hex = HEXUPPER.encode(key.as_bytes());
+    let base32 = BASE32.encode(key.as_bytes());
+
+    SecretKey::core(key, hex, base32)
+}
+
 pub fn get_otp_auth_url() {}
 
 #[doc(hidden)]
@@ -101,46 +174,52 @@ fn get_hmac(
     })
 }
 
-// Helpers
-fn generate_secret_ascii(
-    length: Option<u32>,
-    symbols: bool
-) -> String {
+#[doc(hidden)]
+fn generate_secret_ascii(length: Option<u32>, symbols: bool) -> String {
     let byte_array_length = match length {
         Some(l) => l,
-        None => 32 
+        None => 32,
     };
 
-    let byte_array: Vec<u8> = (0..byte_array_length).map(|_| { rand::random::<u8>() }).collect();
+    let byte_array: Vec<u8> = (0..byte_array_length)
+        .map(|_| rand::random::<u8>())
+        .collect();
 
     // Static for efficiency rather than leaving it to runtime to init a vector of chars
-    static CHAR_SET: [char; 62] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+    static CHAR_SET: [char; 62] = [
+        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+        'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+        's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
     ];
-    static SYMBOL_SET: [char; 22] = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '<', '>', '?', '/', '[', ']', '{', '}', ',', '.', ':', ';'];
+    static SYMBOL_SET: [char; 22] = [
+        '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '<', '>', '?', '/', '[', ']', '{', '}',
+        ',', '.', ':', ';',
+    ];
 
     let mut secret: String = String::from("");
     for (_, value) in byte_array.iter().enumerate() {
         // Need to decide to grab from the symbol/char set if configuration wants to add symbols to secret
         if symbols {
-            secret.push(
-                match value % 2 {
-                    0 => CHAR_SET[((usize::from(value / 1)) * (CHAR_SET.len() - 1)) / 255],
-                    1 => SYMBOL_SET[(((usize::from(value / 1)) * (SYMBOL_SET.len() - 1))) / 255],
-                    _ => unreachable!("Error: Reached the unreachable match arm of `u8` modulo 2")
-                }
-            )
+            secret.push(match value % 2 {
+                0 => CHAR_SET[((usize::from(value / 1)) * (CHAR_SET.len() - 1)) / 255],
+                1 => SYMBOL_SET[((usize::from(value / 1)) * (SYMBOL_SET.len() - 1)) / 255],
+                _ => unreachable!("Error: Reached the unreachable match arm of `u8` modulo 2"),
+            })
         } else {
-            secret.push(CHAR_SET[(((usize::from(value / 1)) * (CHAR_SET.len() - 1))) / 255])
+            secret.push(CHAR_SET[((usize::from(value / 1)) * (CHAR_SET.len() - 1)) / 255])
         }
     }
     secret
 }
 
-fn encodeURIComponent() {
-
+#[doc(hidden)]
+fn encodeURIComponent(string: String) -> String {
+    byte_serialize(string.as_bytes()).collect()
 }
+
+#[doc(hidden)]
+fn generate_otpauth_url() {}
 
 #[cfg(test)]
 mod digest_tests {
@@ -159,7 +238,7 @@ mod digest_tests {
 
 #[cfg(test)]
 mod generate_secret_tests {
-    use crate::generate_secret_ascii;
+    use crate::{generate_secret, generate_secret_ascii};
 
     #[test]
     fn test_generate_secret_ascii_no_symbols() {
@@ -181,5 +260,37 @@ mod generate_secret_tests {
     fn test_generate_secret_ascii_no_defined_length() {
         let secret = generate_secret_ascii(None, false);
         assert_eq!(secret.len(), 32);
+    }
+
+    #[test]
+    fn test_generate_secret_defaults() {
+        let secret_key = generate_secret(None, None);
+        let key_length = match secret_key.ascii {
+            Some(a) => a.len(),
+            None => 0,
+        };
+        assert_eq!(key_length, 32);
+    }
+
+    #[test]
+    fn test_generate_secret_non_default_length() {
+        let secret_key = generate_secret(Some(2000), None);
+        let key_length = match secret_key.ascii {
+            Some(a) => a.len(),
+            None => 0,
+        };
+        assert_eq!(key_length, 2000);
+    }
+
+    #[test]
+    fn test_generate_secret_non_default_symbols() {
+        let secret_key = generate_secret(Some(2000), Some(false));
+        let ascii = match secret_key.ascii {
+            Some(a) => a,
+            None => String::new(),
+        };
+        // Chances are that a secret of length 2000 will have one arbitrary symbol
+        // TODO (kevinburchfield) - Fix this to check against all of the symbols to be certain
+        assert_eq!(ascii.contains("!"), false);
     }
 }
