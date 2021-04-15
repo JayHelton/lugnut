@@ -13,3 +13,12 @@ edition = "2018"
 
 [dependencies]
 rand = "0.8.3"
+thiserror = "1.0"
+hmac = "0.10.1"
+sha-1 = "0.9"
+sha2 = "0.9"
+sha3 = "0.9"
+
+[dependencies.crypto-mac]
+version = "0.10"
+features = ["std"]
