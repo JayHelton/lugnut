@@ -59,20 +59,20 @@ pub fn digest(
     }
 
     // Unwrap enum and apply the hmac alg
-    match mac {
+    Ok(match mac {
         HmacFunction::Sha1(mut _mac) => {
             _mac.update(&buf);
-            Ok(_mac.finalize().into_bytes().to_vec())
+            _mac.finalize().into_bytes().to_vec()
         }
         HmacFunction::Sha256(mut _mac) => {
             _mac.update(&buf);
-            Ok(_mac.finalize().into_bytes().to_vec())
+            _mac.finalize().into_bytes().to_vec()
         }
         HmacFunction::Sha512(mut _mac) => {
             _mac.update(&buf);
-            Ok(_mac.finalize().into_bytes().to_vec())
+            _mac.finalize().into_bytes().to_vec()
         }
-    }
+    })
 }
 
 pub fn generate_secret() {}
