@@ -33,6 +33,13 @@ pub enum Algorithm {
     Sha512,
 }
 
+pub struct SecretKey {
+    ascii: Option<String>,
+    hex: Option<String>,
+    base32: Option<String>,
+    otpauth_url: Option<String>
+}
+
 /// Applys a specified keyed hashing function (hmac).
 ///
 /// # Arguments
@@ -148,6 +155,11 @@ mod digest_tests {
             Err(_) => panic!("There was an error in the test"),
         }
     }
+}
+
+#[cfg(test)]
+mod generate_secret_tests {
+    use crate::generate_secret_ascii;
 
     #[test]
     fn test_generate_secret_ascii_no_symbols() {
