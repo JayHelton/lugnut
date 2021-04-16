@@ -1,4 +1,3 @@
-use data_encoding::{BASE32, HEXUPPER};
 use hmac::{crypto_mac, Hmac, Mac, NewMac};
 use rand;
 use sha1::Sha1;
@@ -35,8 +34,6 @@ pub enum Algorithm {
 
 pub struct SecretKey {
     ascii: Option<String>,
-    hex: Option<String>,
-    base32: Option<String>,
     otpauth_url: Option<String>,
 }
 
@@ -48,14 +45,6 @@ impl fmt::Display for SecretKey {
             Some(a) => fmt.write_str(&format!("ASCII: {}\n", a)),
             None => fmt.write_str("No ASCII representation.\n"),
         };
-        match &self.hex {
-            Some(h) => fmt.write_str(&format!("Hex: {}\n", h)),
-            None => fmt.write_str("No Hex representation.\n"),
-        };
-        match &self.base32 {
-            Some(b) => fmt.write_str(&format!("Base32: {}\n", b)),
-            None => fmt.write_str("No Base32 representation.\n"),
-        };
         Ok(())
     }
 }
@@ -65,8 +54,6 @@ impl SecretKey {
     fn new() -> Self {
         SecretKey {
             ascii: None,
-            hex: None,
-            base32: None,
             otpauth_url: None,
         }
     }
@@ -74,36 +61,21 @@ impl SecretKey {
     fn with_ascii(a: String) -> Self {
         SecretKey {
             ascii: Some(a),
-            hex: None,
-            base32: None,
             otpauth_url: None,
         }
     }
     #[doc(inline)]
-    fn with_hex(h: String) -> Self {
+    fn with_otpauth_url(url: String) -> Self {
         SecretKey {
             ascii: None,
-            hex: Some(h),
-            base32: None,
-            otpauth_url: None,
+            otpauth_url: Some(url),
         }
     }
     #[doc(inline)]
-    fn with_base_32(b: String) -> Self {
+    fn add_otpauth_url(&self, url: String) -> Self {
         SecretKey {
-            ascii: None,
-            hex: None,
-            base32: Some(b),
-            otpauth_url: None,
-        }
-    }
-    #[doc(inline)]
-    fn core(a: String, h: String, b: String) -> Self {
-        SecretKey {
-            ascii: Some(a),
-            hex: Some(h),
-            base32: Some(b),
-            otpauth_url: None,
+            ascii: self.ascii.clone(),
+            otpauth_url: Some(url),
         }
     }
 }
@@ -186,10 +158,7 @@ pub fn generate_secret(length: Option<u32>, symbols: Option<bool>) -> SecretKey 
         None => true,
     };
     let key = generate_secret_ascii(length, defined_symbols);
-    let hex = HEXUPPER.encode(key.as_bytes());
-    let base32 = BASE32.encode(key.as_bytes());
-
-    SecretKey::core(key, hex, base32)
+    SecretKey::with_ascii(key)
 }
 
 pub fn get_otp_auth_url() {}
