@@ -96,15 +96,30 @@ fn generate_root(
         None => 0 // 0 & 0xf == 0
     };
 
-    let f_msg = "Failed to pull from digest.";
-    let code = 
-        (u32::from(defined_digest.get(offset as usize).expect(f_msg) & 0x7f) << 24) | 
-        (u32::from(defined_digest.get((offset + 1) as usize).expect(f_msg) & 0xff) << 16) |
-        (u32::from(defined_digest.get((offset + 2) as usize).expect(f_msg) & 0xff) << 8) |
-        (u32::from(defined_digest.get((offset + 3) as usize).expect(f_msg) & 0xff));
+    let no_offset = match defined_digest.get(offset as usize) {
+        Some(o) => u32::from(o.clone() & 0x7f) << 24,
+        None => 0
+    };
+    let one_offset = match defined_digest.get(offset as usize) {
+        Some(o) => u32::from(o.clone() & 0xff) << 16,
+        None => 0
+    };
+    let two_offset = match defined_digest.get(offset as usize) {
+        Some(o) => u32::from(o.clone() & 0xff) << 8,
+        None => 0
+    };
+    let three_offset = match defined_digest.get(offset as usize) {
+        Some(o) => u32::from(o.clone() & 0xff),
+        None => 0
+    };
+    let code = no_offset | one_offset | two_offset | three_offset;
 
-    let padded_string = format!("{:0>width$}", code.to_string(), width=defined_digits as usize);
-    Ok((&padded_string[(padded_string.len() - defined_digits as usize)..padded_string.len()]).to_string())
+    if code == 0 {
+        Err(GenerationError::FailedToGenerateHOTP())
+    } else {
+        let padded_string = format!("{:0>width$}", code.to_string(), width=defined_digits as usize);
+        Ok((&padded_string[(padded_string.len() - defined_digits as usize)..padded_string.len()]).to_string())
+    }
 }
 
 pub fn verify() {}
