@@ -18,6 +18,8 @@ pub mod totp;
 pub enum GenerationError {
     #[error("Invalid Key Length")]
     InvalidKeyLength(#[from] crypto_mac::InvalidKeyLength),
+    #[error("Failed to generate HMAC-based One-Time Password")]
+    FailedToGenerateHOTP()
 }
 
 enum HmacFunction<A, B, C> {
@@ -30,37 +32,6 @@ pub enum Algorithm {
     Sha1,
     Sha256,
     Sha512,
-}
-
-pub struct SecretKey {
-    ascii: String,
-    otpauth_url: Option<String>,
-}
-
-impl fmt::Display for SecretKey {
-    #[doc(inline)]
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut str = "";
-        fmt.write_str(&format!("ASCII: {}\n", &self.ascii));
-        Ok(())
-    }
-}
-
-impl SecretKey {
-    #[doc(inline)]
-    fn new(a: String) -> Self {
-        SecretKey {
-            ascii: a,
-            otpauth_url: None,
-        }
-    }
-    #[doc(inline)]
-    fn add_otpauth_url(&self, url: String) -> Self {
-        SecretKey {
-            ascii: self.ascii.clone(),
-            otpauth_url: Some(url),
-        }
-    }
 }
 
 static CHAR_SET: [char; 62] = [
@@ -120,43 +91,68 @@ pub fn digest(
     })
 }
 
-/// Default layer to generate a SecretKey with ASCII representation of the secret key
+/// Default layer to generate a secret key in ASCII representations
 ///
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ generate_secret_default, generate_secret };
-/// let secret_key = generate_secret_default();
+/// use lugnut::{ generate_secret };
+/// let secret_key = generate_secret();
 /// ```
-pub fn generate_secret_default() -> SecretKey {
-    generate_secret(None, None)
+pub fn generate_secret() -> String {
+    generate_secret_default(None, None)
 }
 
-/// Generates a SecretKey with ASCII representation of the secret key
-///
-/// # Arguments
-///
-/// * `length` - Optional parameter that defines the length of the secret key (default: 32)
-/// * `symbols` - Optional parameter that dictates whether symbols are allowed in the secret key (default: true)
+/// Length defining layer to generate a secret key in ASCII representation
 ///
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ generate_secret, SecretKey };
-/// let secret_key = generate_secret(Some(200), Some(false)); // Secret key of length 200, no symbols allowed
-/// let secret_key = generate_secret(Some(100), None); // Secret key of length 100, symbols allows
-/// let secret_key = generate_secret(None, Some(true)); // Secret key of length 32, symbols allows
+/// use lugnut::{ generate_sized_secret };
+/// let secret_key = generate_sized_secret(100);
 /// ```
-pub fn generate_secret(length: Option<u32>, symbols: Option<bool>) -> SecretKey {
+pub fn generate_sized_secret(length: u32) -> String {
+    generate_secret_default(Some(length), None)
+}
+
+/// Symbol defining layer to generate a secret key in ASCII representation
+///
+/// # Examples
+///
+/// ```
+/// use lugnut::{ generate_secret_without_symbols };
+/// let secret_key = generate_secret_without_symbols();
+/// ```
+pub fn generate_secret_without_symbols() -> String {
+    generate_secret_default(None, Some(false))
+}
+
+/// Symbol and length defining layer to generate a secret key in ASCII representation
+///
+/// # Examples
+///
+/// ```
+/// use lugnut::{ generate_secret_without_symbols };
+/// let secret_key = generate_secret_without_symbols();
+/// ```
+pub fn generate_sized_secret_without_symbols(length: u32) -> String {
+    generate_secret_default(Some(length), Some(true))
+}
+
+pub fn get_otp_auth_url() {}
+
+#[doc(hidden)]
+fn generate_secret_default(length: Option<u32>, symbols: Option<bool>) -> String {
     let defined_symbols = match symbols {
         Some(s) => s,
         None => true,
     };
-    let key = generate_secret_ascii(length, defined_symbols);
-    SecretKey::new(key)
+    let defined_length = match length {
+        Some(l) => l,
+        None => 32
+    };
+    generate_secret_ascii(defined_length, defined_symbols)
 }
-
-pub fn get_otp_auth_url() {}
 
 #[doc(hidden)]
 fn get_hmac(
@@ -171,13 +167,8 @@ fn get_hmac(
 }
 
 #[doc(hidden)]
-fn generate_secret_ascii(length: Option<u32>, symbols: bool) -> String {
-    let byte_array_length = match length {
-        Some(l) => l,
-        None => 32,
-    };
-
-    let byte_array: Vec<u8> = (0..byte_array_length)
+fn generate_secret_ascii(length: u32, symbols: bool) -> String {
+    let byte_array: Vec<u8> = (0..length)
         .map(|_| rand::random::<u8>())
         .collect();
 
@@ -222,47 +213,34 @@ mod digest_tests {
 
 #[cfg(test)]
 mod generate_secret_tests {
-    use crate::{generate_secret, generate_secret_ascii};
+    use crate::{generate_secret, generate_secret_ascii, generate_sized_secret, generate_secret_without_symbols, SYMBOL_SET};
 
     #[test]
     fn test_generate_secret_ascii_no_symbols() {
-        let secret = generate_secret_ascii(Some(2000), false);
+        let secret = generate_secret_ascii(2000, false);
         assert_eq!(secret.len(), 2000);
     }
 
     #[test]
     fn test_generate_secret_ascii_symbols() {
-        let secret = generate_secret_ascii(Some(2000), true);
+        let secret = generate_secret_ascii(2000, true);
         assert_eq!(secret.len(), 2000);
-
-        // Chances are that a secret of length 2000 will have one arbitrary symbol
-        // TODO (kevinburchfield) - Fix this to check against all of the symbols to be certain
         assert_eq!(secret.contains("!"), true);
     }
 
     #[test]
-    fn test_generate_secret_ascii_no_defined_length() {
-        let secret = generate_secret_ascii(None, false);
-        assert_eq!(secret.len(), 32);
-    }
-
-    #[test]
     fn test_generate_secret_defaults() {
-        let secret_key = generate_secret(None, None);
-        assert_eq!(secret_key.ascii.len(), 32);
+        assert_eq!(generate_secret().len(), 32);
+        assert_eq!(generate_secret().chars().any(|c| match SYMBOL_SET.binary_search(&c) { Ok(_) => true, _ => false }), true)
     }
 
     #[test]
     fn test_generate_secret_non_default_length() {
-        let secret_key = generate_secret(Some(2000), None);
-        assert_eq!(secret_key.ascii.len(), 2000);
+        assert_eq!(generate_sized_secret(2000).len(), 2000);
     }
 
     #[test]
     fn test_generate_secret_non_default_symbols() {
-        let secret_key = generate_secret(Some(100), Some(false));
-        // Chances are that a secret of length 2000 will have one arbitrary symbol
-        // TODO (kevinburchfield) - Fix this to check against all of the symbols to be certain
-        assert_eq!(secret_key.ascii.contains("!"), false);
+        assert_eq!(generate_secret_without_symbols().chars().any(|c| match SYMBOL_SET.binary_search(&c) { Ok(_) => true, _ => false }), false)
     }
 }
