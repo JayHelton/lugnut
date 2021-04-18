@@ -14,7 +14,6 @@ edition = "2018"
 [dependencies]
 rand = "0.8.3"
 url = "2.2.1"
-data-encoding = "2.3.2"
 thiserror = "1.0"
 hmac = "0.10.1"
 sha-1 = "0.9"

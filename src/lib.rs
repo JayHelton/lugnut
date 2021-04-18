@@ -1,9 +1,7 @@
-use data_encoding::{BASE32, HEXUPPER};
 use hmac::{crypto_mac, Hmac, Mac, NewMac};
 use rand;
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
-use std::fmt;
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 
@@ -19,6 +17,8 @@ pub mod totp;
 pub enum GenerationError {
     #[error("Invalid Key Length")]
     InvalidKeyLength(#[from] crypto_mac::InvalidKeyLength),
+    #[error("Failed to generate HMAC-based One-Time Password")]
+    FailedToGenerateHOTP(),
 }
 
 enum HmacFunction<A, B, C> {
@@ -31,81 +31,6 @@ pub enum Algorithm {
     Sha1,
     Sha256,
     Sha512,
-}
-
-pub struct SecretKey {
-    ascii: Option<String>,
-    hex: Option<String>,
-    base32: Option<String>,
-    otpauth_url: Option<String>,
-}
-
-impl fmt::Display for SecretKey {
-    #[doc(inline)]
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut str = "";
-        match &self.ascii {
-            Some(a) => fmt.write_str(&format!("ASCII: {}\n", a)),
-            None => fmt.write_str("No ASCII representation.\n"),
-        };
-        match &self.hex {
-            Some(h) => fmt.write_str(&format!("Hex: {}\n", h)),
-            None => fmt.write_str("No Hex representation.\n"),
-        };
-        match &self.base32 {
-            Some(b) => fmt.write_str(&format!("Base32: {}\n", b)),
-            None => fmt.write_str("No Base32 representation.\n"),
-        };
-        Ok(())
-    }
-}
-
-impl SecretKey {
-    #[doc(inline)]
-    fn new() -> Self {
-        SecretKey {
-            ascii: None,
-            hex: None,
-            base32: None,
-            otpauth_url: None,
-        }
-    }
-    #[doc(inline)]
-    fn with_ascii(a: String) -> Self {
-        SecretKey {
-            ascii: Some(a),
-            hex: None,
-            base32: None,
-            otpauth_url: None,
-        }
-    }
-    #[doc(inline)]
-    fn with_hex(h: String) -> Self {
-        SecretKey {
-            ascii: None,
-            hex: Some(h),
-            base32: None,
-            otpauth_url: None,
-        }
-    }
-    #[doc(inline)]
-    fn with_base_32(b: String) -> Self {
-        SecretKey {
-            ascii: None,
-            hex: None,
-            base32: Some(b),
-            otpauth_url: None,
-        }
-    }
-    #[doc(inline)]
-    fn core(a: String, h: String, b: String) -> Self {
-        SecretKey {
-            ascii: Some(a),
-            hex: Some(h),
-            base32: Some(b),
-            otpauth_url: None,
-        }
-    }
 }
 
 static CHAR_SET: [char; 62] = [
@@ -165,34 +90,62 @@ pub fn digest(
     })
 }
 
-/// Generates a SecretKey with ASCII, Hex, and Base32 representations of the secret key
-///
-/// # Arguments
-///
-/// * `length` - Optional parameter that defines the length of the secret key (default: 32)
-/// * `symbols` - Optional parameter that dictates whether symbols are allowed in the secret key (default: true)
+/// Default layer to generate a secret key in ASCII representations
 ///
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ generate_secret, SecretKey };
-/// let secret_key = generate_secret(Some(200), Some(false)); // Secret key of length 200, no symbols allowed
-/// let secret_key = generate_secret(Some(100), None); // Secret key of length 100, symbols allows
-/// let secret_key = generate_secret(None, Some(true)); // Secret key of length 32, symbols allows
+/// use lugnut::{ generate_secret };
+/// let secret_key = generate_secret();
 /// ```
-pub fn generate_secret(length: Option<u32>, symbols: Option<bool>) -> SecretKey {
-    let defined_symbols = match symbols {
-        Some(s) => s,
-        None => true,
-    };
-    let key = generate_secret_ascii(length, defined_symbols);
-    let hex = HEXUPPER.encode(key.as_bytes());
-    let base32 = BASE32.encode(key.as_bytes());
+pub fn generate_secret() -> String {
+    generate_secret_default(None, None)
+}
 
-    SecretKey::core(key, hex, base32)
+/// Length defining layer to generate a secret key in ASCII representation
+///
+/// # Examples
+///
+/// ```
+/// use lugnut::{ generate_sized_secret };
+/// let secret_key = generate_sized_secret(100);
+/// ```
+pub fn generate_sized_secret(length: u32) -> String {
+    generate_secret_default(Some(length), None)
+}
+
+/// Symbol defining layer to generate a secret key in ASCII representation
+///
+/// # Examples
+///
+/// ```
+/// use lugnut::{ generate_secret_without_symbols };
+/// let secret_key = generate_secret_without_symbols();
+/// ```
+pub fn generate_secret_without_symbols() -> String {
+    generate_secret_default(None, Some(false))
+}
+
+/// Symbol and length defining layer to generate a secret key in ASCII representation
+///
+/// # Examples
+///
+/// ```
+/// use lugnut::{ generate_secret_without_symbols };
+/// let secret_key = generate_secret_without_symbols();
+/// ```
+pub fn generate_sized_secret_without_symbols(length: u32) -> String {
+    generate_secret_default(Some(length), Some(true))
 }
 
 pub fn get_otp_auth_url() {}
+
+#[doc(hidden)]
+fn generate_secret_default(length: Option<u32>, symbols: Option<bool>) -> String {
+    let defined_symbols = if let Some(s) = symbols { s } else { true };
+    let defined_length = if let Some(l) = length { l } else { 32 };
+    generate_secret_ascii(defined_length, defined_symbols)
+}
 
 #[doc(hidden)]
 fn get_hmac(
@@ -207,15 +160,8 @@ fn get_hmac(
 }
 
 #[doc(hidden)]
-fn generate_secret_ascii(length: Option<u32>, symbols: bool) -> String {
-    let byte_array_length = match length {
-        Some(l) => l,
-        None => 32,
-    };
-
-    let byte_array: Vec<u8> = (0..byte_array_length)
-        .map(|_| rand::random::<u8>())
-        .collect();
+fn generate_secret_ascii(length: u32, symbols: bool) -> String {
+    let byte_array: Vec<u8> = (0..length).map(|_| rand::random::<u8>()).collect();
 
     let mut secret: String = String::from("");
     for (_, value) in byte_array.iter().enumerate() {
@@ -258,59 +204,53 @@ mod digest_tests {
 
 #[cfg(test)]
 mod generate_secret_tests {
-    use crate::{generate_secret, generate_secret_ascii};
+    use crate::{
+        generate_secret, generate_secret_ascii, generate_secret_without_symbols,
+        generate_sized_secret, SYMBOL_SET,
+    };
 
     #[test]
     fn test_generate_secret_ascii_no_symbols() {
-        let secret = generate_secret_ascii(Some(2000), false);
+        let secret = generate_secret_ascii(2000, false);
         assert_eq!(secret.len(), 2000);
     }
 
     #[test]
     fn test_generate_secret_ascii_symbols() {
-        let secret = generate_secret_ascii(Some(2000), true);
+        let secret = generate_secret_ascii(2000, true);
         assert_eq!(secret.len(), 2000);
-
-        // Chances are that a secret of length 2000 will have one arbitrary symbol
-        // TODO (kevinburchfield) - Fix this to check against all of the symbols to be certain
         assert_eq!(secret.contains("!"), true);
     }
 
     #[test]
-    fn test_generate_secret_ascii_no_defined_length() {
-        let secret = generate_secret_ascii(None, false);
-        assert_eq!(secret.len(), 32);
-    }
-
-    #[test]
     fn test_generate_secret_defaults() {
-        let secret_key = generate_secret(None, None);
-        let key_length = match secret_key.ascii {
-            Some(a) => a.len(),
-            None => 0,
-        };
-        assert_eq!(key_length, 32);
+        assert_eq!(generate_secret().len(), 32);
+        assert_eq!(
+            generate_secret()
+                .chars()
+                .any(|c| match SYMBOL_SET.binary_search(&c) {
+                    Ok(_) => true,
+                    _ => false,
+                }),
+            true
+        )
     }
 
     #[test]
     fn test_generate_secret_non_default_length() {
-        let secret_key = generate_secret(Some(2000), None);
-        let key_length = match secret_key.ascii {
-            Some(a) => a.len(),
-            None => 0,
-        };
-        assert_eq!(key_length, 2000);
+        assert_eq!(generate_sized_secret(2000).len(), 2000);
     }
 
     #[test]
     fn test_generate_secret_non_default_symbols() {
-        let secret_key = generate_secret(Some(100), Some(false));
-        let ascii = match secret_key.ascii {
-            Some(a) => a,
-            None => String::new(),
-        };
-        // Chances are that a secret of length 2000 will have one arbitrary symbol
-        // TODO (kevinburchfield) - Fix this to check against all of the symbols to be certain
-        assert_eq!(ascii.contains("!"), false);
+        assert_eq!(
+            generate_secret_without_symbols()
+                .chars()
+                .any(|c| match SYMBOL_SET.binary_search(&c) {
+                    Ok(_) => true,
+                    _ => false,
+                }),
+            false
+        )
     }
 }
