@@ -76,17 +76,10 @@ fn generate_root(
     digest_arg: Option<Vec<u8>>,
 ) -> std::result::Result<String, GenerationError> {
     let defined_digits = if let Some(d) = digits { d } else { 6 };
-
-    // let defined_digest = match digest_arg {
-    //     Some(d) => d,
-    //     None => match digest(key, counter, Algorithm::Sha1) {
-    //         Ok(d) => d,
-    //         _ => return Err(GenerationError::FailedToGenerateHOTP()),
-    //     },
-    // };
-    let defined_digest = match digest_arg {
-        Some(d) => d,
-        None => digest(key, counter, Algorithm::Sha1)?
+    let defined_digest = if let Some(d) = digest_arg {
+        d
+    } else {
+        digest(key, counter, Algorithm::Sha1)?
     };
 
     let offset = if let Some(o) = defined_digest.last() {
