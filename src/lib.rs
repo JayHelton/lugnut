@@ -2,7 +2,6 @@ use hmac::{crypto_mac, Hmac, Mac, NewMac};
 use rand;
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
-use std::fmt;
 use thiserror::Error;
 use url::form_urlencoded::byte_serialize;
 
@@ -19,7 +18,7 @@ pub enum GenerationError {
     #[error("Invalid Key Length")]
     InvalidKeyLength(#[from] crypto_mac::InvalidKeyLength),
     #[error("Failed to generate HMAC-based One-Time Password")]
-    FailedToGenerateHOTP()
+    FailedToGenerateHOTP(),
 }
 
 enum HmacFunction<A, B, C> {
@@ -143,14 +142,8 @@ pub fn get_otp_auth_url() {}
 
 #[doc(hidden)]
 fn generate_secret_default(length: Option<u32>, symbols: Option<bool>) -> String {
-    let defined_symbols = match symbols {
-        Some(s) => s,
-        None => true,
-    };
-    let defined_length = match length {
-        Some(l) => l,
-        None => 32
-    };
+    let defined_symbols = if let Some(s) = symbols { s } else { true };
+    let defined_length = if let Some(l) = length { l } else { 32 };
     generate_secret_ascii(defined_length, defined_symbols)
 }
 
@@ -168,9 +161,7 @@ fn get_hmac(
 
 #[doc(hidden)]
 fn generate_secret_ascii(length: u32, symbols: bool) -> String {
-    let byte_array: Vec<u8> = (0..length)
-        .map(|_| rand::random::<u8>())
-        .collect();
+    let byte_array: Vec<u8> = (0..length).map(|_| rand::random::<u8>()).collect();
 
     let mut secret: String = String::from("");
     for (_, value) in byte_array.iter().enumerate() {
@@ -213,7 +204,10 @@ mod digest_tests {
 
 #[cfg(test)]
 mod generate_secret_tests {
-    use crate::{generate_secret, generate_secret_ascii, generate_sized_secret, generate_secret_without_symbols, SYMBOL_SET};
+    use crate::{
+        generate_secret, generate_secret_ascii, generate_secret_without_symbols,
+        generate_sized_secret, SYMBOL_SET,
+    };
 
     #[test]
     fn test_generate_secret_ascii_no_symbols() {
@@ -231,7 +225,15 @@ mod generate_secret_tests {
     #[test]
     fn test_generate_secret_defaults() {
         assert_eq!(generate_secret().len(), 32);
-        assert_eq!(generate_secret().chars().any(|c| match SYMBOL_SET.binary_search(&c) { Ok(_) => true, _ => false }), true)
+        assert_eq!(
+            generate_secret()
+                .chars()
+                .any(|c| match SYMBOL_SET.binary_search(&c) {
+                    Ok(_) => true,
+                    _ => false,
+                }),
+            true
+        )
     }
 
     #[test]
@@ -241,6 +243,14 @@ mod generate_secret_tests {
 
     #[test]
     fn test_generate_secret_non_default_symbols() {
-        assert_eq!(generate_secret_without_symbols().chars().any(|c| match SYMBOL_SET.binary_search(&c) { Ok(_) => true, _ => false }), false)
+        assert_eq!(
+            generate_secret_without_symbols()
+                .chars()
+                .any(|c| match SYMBOL_SET.binary_search(&c) {
+                    Ok(_) => true,
+                    _ => false,
+                }),
+            false
+        )
     }
 }

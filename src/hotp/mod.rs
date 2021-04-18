@@ -7,10 +7,7 @@ use crate::{digest, Algorithm, GenerationError};
 /// * `key` - A string of the secret
 /// * `counter` - The counter to hash
 ///
-pub fn generate(
-    key: String,
-    counter: u128
-) -> std::result::Result<String, GenerationError> {
+pub fn generate(key: String, counter: u128) -> std::result::Result<String, GenerationError> {
     generate_root(key, counter, None, None)
 }
 
@@ -25,7 +22,7 @@ pub fn generate(
 pub fn generate_n_length(
     key: String,
     counter: u128,
-    n: u32
+    n: u32,
 ) -> std::result::Result<String, GenerationError> {
     generate_root(key, counter, Some(n), None)
 }
@@ -41,7 +38,7 @@ pub fn generate_n_length(
 pub fn generate_with_custom_digest(
     key: String,
     counter: u128,
-    digest: Vec<u8>
+    digest: Vec<u8>,
 ) -> std::result::Result<String, GenerationError> {
     generate_root(key, counter, None, Some(digest))
 }
@@ -58,7 +55,7 @@ pub fn generate_n_length_with_custom_digest(
     key: String,
     counter: u128,
     n: u32,
-    digest: Vec<u8>
+    digest: Vec<u8>,
 ) -> std::result::Result<String, GenerationError> {
     generate_root(key, counter, Some(n), Some(digest))
 }
@@ -76,49 +73,58 @@ fn generate_root(
     key: String,
     counter: u128,
     digits: Option<u32>,
-    digest_arg: Option<Vec<u8>>
+    digest_arg: Option<Vec<u8>>,
 ) -> std::result::Result<String, GenerationError> {
-    let defined_digits = match digits {
-        Some(d) => d,
-        None => 6
-    };
+    let defined_digits = if let Some(d) = digits { d } else { 6 };
 
     let defined_digest = match digest_arg {
         Some(d) => d,
         None => match digest(key, counter, Algorithm::Sha1) {
             Ok(d) => d,
-            _ => return Err(GenerationError::FailedToGenerateHOTP())
-        }
+            _ => return Err(GenerationError::FailedToGenerateHOTP()),
+        },
     };
 
-    let offset = match defined_digest.last() {
-        Some(o) => o & 0xf,
-        None => 0 // 0 & 0xf == 0
+    let offset = if let Some(o) = defined_digest.last() {
+        o & 0xf
+    } else {
+        0
     };
 
-    let no_offset = match defined_digest.get(offset as usize) {
-        Some(o) => u32::from(o.clone() & 0x7f) << 24,
-        None => 0
+    let no_offset = if let Some(o) = defined_digest.get(offset as usize) {
+        u32::from(o.clone() & 0x7f) << 24
+    } else {
+        0
     };
-    let one_offset = match defined_digest.get(offset as usize) {
-        Some(o) => u32::from(o.clone() & 0xff) << 16,
-        None => 0
+    let one_offset = if let Some(o) = defined_digest.get((offset + 1) as usize) {
+        u32::from(o.clone() & 0xff) << 16
+    } else {
+        0
     };
-    let two_offset = match defined_digest.get(offset as usize) {
-        Some(o) => u32::from(o.clone() & 0xff) << 8,
-        None => 0
+    let two_offset = if let Some(o) = defined_digest.get((offset + 2) as usize) {
+        u32::from(o.clone() & 0xff) << 8
+    } else {
+        0
     };
-    let three_offset = match defined_digest.get(offset as usize) {
-        Some(o) => u32::from(o.clone() & 0xff),
-        None => 0
+    let three_offset = if let Some(o) = defined_digest.get((offset + 3) as usize) {
+        u32::from(o.clone() & 0xff)
+    } else {
+        0
     };
     let code = no_offset | one_offset | two_offset | three_offset;
 
     if code == 0 {
         Err(GenerationError::FailedToGenerateHOTP())
     } else {
-        let padded_string = format!("{:0>width$}", code.to_string(), width=defined_digits as usize);
-        Ok((&padded_string[(padded_string.len() - defined_digits as usize)..padded_string.len()]).to_string())
+        let padded_string = format!(
+            "{:0>width$}",
+            code.to_string(),
+            width = defined_digits as usize
+        );
+        Ok(
+            (&padded_string[(padded_string.len() - defined_digits as usize)..padded_string.len()])
+                .to_string(),
+        )
     }
 }
 
@@ -127,15 +133,15 @@ pub fn verify_delta() {}
 
 #[cfg(test)]
 mod hotp_tests {
+    use crate::generate_secret;
     use crate::hotp::{generate, generate_n_length};
-    use crate::{generate_secret};
 
     #[test]
     fn test_generate_hotp_default() {
         let key = generate_secret();
         let hotp = match generate(key, 100) {
             Ok(h) => h,
-            _ => String::from("")
+            _ => String::from(""),
         };
         assert_eq!(hotp.len(), 6);
     }
@@ -145,7 +151,7 @@ mod hotp_tests {
         let key = generate_secret();
         let hotp = match generate_n_length(key, 100, 50) {
             Ok(h) => h,
-            _ => String::from("")
+            _ => String::from(""),
         };
         assert_eq!(hotp.len(), 50);
     }
