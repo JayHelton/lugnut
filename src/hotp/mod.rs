@@ -77,12 +77,16 @@ fn generate_root(
 ) -> std::result::Result<String, GenerationError> {
     let defined_digits = if let Some(d) = digits { d } else { 6 };
 
+    // let defined_digest = match digest_arg {
+    //     Some(d) => d,
+    //     None => match digest(key, counter, Algorithm::Sha1) {
+    //         Ok(d) => d,
+    //         _ => return Err(GenerationError::FailedToGenerateHOTP()),
+    //     },
+    // };
     let defined_digest = match digest_arg {
         Some(d) => d,
-        None => match digest(key, counter, Algorithm::Sha1) {
-            Ok(d) => d,
-            _ => return Err(GenerationError::FailedToGenerateHOTP()),
-        },
+        None => digest(key, counter, Algorithm::Sha1)?
     };
 
     let offset = if let Some(o) = defined_digest.last() {
