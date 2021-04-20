@@ -125,11 +125,70 @@ fn generate_root(
     }
 }
 
-pub fn verify() {}
-pub fn verify_delta() {}
+pub fn verify_root(
+    token: String,
+    key: String,
+    counter: u128,
+    digits: Option<u32>,
+    window: Option<u32>,
+    digest_arg: Option<Vec<u8>>,
+) -> std::result::Result<bool, GenerationError> {
+    let defined_digits = if let Some(d) = digits { d } else { 6 };
+    let defined_window = if let Some(w) = window { w } else { 10 };
+    let defined_digest = if let Some(d) = digest_arg {
+        d
+    } else {
+        digest(key.clone(), counter, Algorithm::Sha1)?
+    };
+
+    if token.len() as u32 != defined_digits {
+        return Ok(false);
+    }
+
+    verify_delta_root(
+        token,
+        key.clone(),
+        defined_digits,
+        defined_window,
+        counter,
+        defined_digest,
+    )
+}
+
+pub fn verify_delta_root(
+    token: String,
+    key: String,
+    digits: u32,
+    window: u32,
+    counter: u128,
+    digest_arg: Vec<u8>,
+) -> std::result::Result<bool, GenerationError> {
+    let parsed_token = if let Ok(pt) = token.parse::<u32>() {
+        pt
+    } else {
+        println!("\n\nReturning from a failed parse\n\n");
+        return Ok(false);
+    };
+
+    for i in counter..=counter + window as u128 {
+        let test_otp = if let Ok(otp) =
+            generate_n_length_with_custom_digest(key.clone(), i, digits, digest_arg.clone())
+        {
+            otp
+        } else {
+            String::from("")
+        };
+        if test_otp == token {
+            return Ok(true);
+        }
+    }
+
+    // Default false
+    Ok(false)
+}
 
 #[cfg(test)]
-mod hotp_tests {
+mod tests_generate {
     use crate::generate_secret;
     use crate::hotp::{generate, generate_n_length};
 
@@ -151,5 +210,40 @@ mod hotp_tests {
             _ => String::from(""),
         };
         assert_eq!(hotp.len(), 50);
+    }
+}
+
+#[cfg(test)]
+mod tests_verify {
+    use crate::hotp::{generate_n_length_with_custom_digest, verify_delta_root};
+    use crate::{digest, Algorithm};
+
+    #[test]
+    fn test_verify() {
+        let key = String::from("SuperSecretKey"); // Generates a otp of 0897822634
+        let counter = 100;
+        let digits = 10;
+        let defined_digest = if let Ok(d) = digest(key.clone(), counter, Algorithm::Sha1) {
+            d
+        } else {
+            vec![]
+        };
+        let hotp = match generate_n_length_with_custom_digest(
+            key.clone(),
+            counter,
+            digits,
+            defined_digest.clone(),
+        ) {
+            Ok(h) => h,
+            _ => String::from(""),
+        };
+        let verified = if let Ok(v) =
+            verify_delta_root(hotp, key, digits, 0, counter, defined_digest.clone())
+        {
+            v
+        } else {
+            false
+        };
+        assert_eq!(true, verified);
     }
 }
