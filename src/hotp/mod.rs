@@ -163,13 +163,6 @@ pub fn verify_delta_root(
     counter: u128,
     digest_arg: Vec<u8>,
 ) -> std::result::Result<bool, GenerationError> {
-    let parsed_token = if let Ok(pt) = token.parse::<u32>() {
-        pt
-    } else {
-        println!("\n\nReturning from a failed parse\n\n");
-        return Ok(false);
-    };
-
     for i in counter..=counter + window as u128 {
         let test_otp = if let Ok(otp) =
             generate_n_length_with_custom_digest(key.clone(), i, digits, digest_arg.clone())
