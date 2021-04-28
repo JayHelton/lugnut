@@ -1,64 +1,39 @@
 use crate::{digest, Algorithm, GenerationError};
 
-/// Default layer to generate a HOTP using the SHA1 hash algorithm
-///
-/// # Arguments
-///
-/// * `key` - A string of the secret
-/// * `counter` - The counter to hash
-///
-pub fn generate(key: String, counter: u128) -> std::result::Result<String, GenerationError> {
-    generate_root(key, counter, None, None)
-}
-
-/// Layer to generate a HOTP of size N using the SHA1 hash algorithm
-///
-/// # Arguments
-///
-/// * `key` - A string of the secret
-/// * `counter` - The counter to hash
-/// * `n` - The length of the one time pad
-///
-pub fn generate_n_length(
+pub struct Hotp {
     key: String,
     counter: u128,
-    n: u32,
-) -> std::result::Result<String, GenerationError> {
-    generate_root(key, counter, Some(n), None)
+    digits: Option<u32>,
+    digest: Option<Vec<u8>>,
+}
+impl Hotp {
+    pub fn new(key: String, counter: u128) -> Hotp {
+        Hotp {
+            key,
+            counter,
+            digits: None,
+            digest: None 
+        }
+    }
+    pub fn of_n_length<'a>(&'a mut self, n: u32) -> &'a mut Hotp {
+        self.digits = Some(n);
+        self
+    }
+    pub fn with_digest<'a>(&'a mut self, digest: Vec<u8>) -> &'a mut Hotp {
+        self.digest = Some(digest);
+        self
+    }
+    pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
+        generate_root(self.key.clone(), self.counter, self.digits, self.digest.clone())
+    }
+    pub fn verify<'a>(&'a mut self, token: String) -> std::result::Result<bool, GenerationError> {
+        verify_delta_root(token, self.key.clone(), self.counter, self.digits, None, self.digest.clone())
+    }
+    pub fn verify_with_window<'a>(&'a mut self, token: String, window: u32) -> std::result::Result<bool, GenerationError> {
+        verify_delta_root(token, self.key.clone(), self.counter, self.digits, Some(window), self.digest.clone())
+    }
 }
 
-/// Layer to generate a HOTP with a custom hash digest
-///
-/// # Arguments
-///
-/// * `key` - A string of the secret
-/// * `counter` - The counter to hash
-/// * `digest` - Custom hash digest to use
-///
-pub fn generate_with_custom_digest(
-    key: String,
-    counter: u128,
-    digest: Vec<u8>,
-) -> std::result::Result<String, GenerationError> {
-    generate_root(key, counter, None, Some(digest))
-}
-
-/// Layer to generate a HOTP of size N with a custom hash digest
-///
-/// # Arguments
-///
-/// * `key` - A string of the secret
-/// * `counter` - The counter to hash
-/// * `n` - The length of the one time pad
-///
-pub fn generate_n_length_with_custom_digest(
-    key: String,
-    counter: u128,
-    n: u32,
-    digest: Vec<u8>,
-) -> std::result::Result<String, GenerationError> {
-    generate_root(key, counter, Some(n), Some(digest))
-}
 
 /// This section works to fill up the unsigned 32 bit number by:
 /// 1.  Taking the 8 bits at the offset from the digest, AND'ing with 0x7f so that we can ignore the sign bit
@@ -125,7 +100,8 @@ fn generate_root(
     }
 }
 
-pub fn verify_root(
+#[doc(hidden)]
+fn verify_delta_root(
     token: String,
     key: String,
     counter: u128,
@@ -133,6 +109,7 @@ pub fn verify_root(
     window: Option<u32>,
     digest_arg: Option<Vec<u8>>,
 ) -> std::result::Result<bool, GenerationError> {
+
     let defined_digits = if let Some(d) = digits { d } else { 6 };
     let defined_window = if let Some(w) = window { w } else { 10 };
     let defined_digest = if let Some(d) = digest_arg {
@@ -145,27 +122,9 @@ pub fn verify_root(
         return Ok(false);
     }
 
-    verify_delta_root(
-        token,
-        key.clone(),
-        defined_digits,
-        defined_window,
-        counter,
-        defined_digest,
-    )
-}
-
-pub fn verify_delta_root(
-    token: String,
-    key: String,
-    digits: u32,
-    window: u32,
-    counter: u128,
-    digest_arg: Vec<u8>,
-) -> std::result::Result<bool, GenerationError> {
-    for i in counter..=counter + window as u128 {
+    for i in counter..=counter + defined_window as u128 {
         let test_otp = if let Ok(otp) =
-            generate_n_length_with_custom_digest(key.clone(), i, digits, digest_arg.clone())
+            generate_root(key.clone(), i, Some(defined_digits), Some(defined_digest.clone()))
         {
             otp
         } else {
@@ -183,32 +142,35 @@ pub fn verify_delta_root(
 #[cfg(test)]
 mod tests_generate {
     use crate::generate_secret;
-    use crate::hotp::{generate, generate_n_length};
+    use crate::hotp::{Hotp};
 
     #[test]
     fn test_generate_hotp_default() {
         let key = generate_secret();
-        let hotp = match generate(key, 100) {
+        let hotp = Hotp::new(key, 100);
+        let pad = match hotp.generate() {
             Ok(h) => h,
             _ => String::from(""),
         };
-        assert_eq!(hotp.len(), 6);
+        assert_eq!(pad.len(), 6);
     }
 
     #[test]
     fn test_generate_hotp_custom_length() {
         let key = generate_secret();
-        let hotp = match generate_n_length(key, 100, 50) {
+        let mut hotp = Hotp::new(key, 100);
+        hotp.of_n_length(50);
+        let pad = match hotp.generate() {
             Ok(h) => h,
             _ => String::from(""),
         };
-        assert_eq!(hotp.len(), 50);
+        assert_eq!(pad.len(), 50);
     }
 }
 
 #[cfg(test)]
 mod tests_verify {
-    use crate::hotp::{generate_n_length_with_custom_digest, verify_delta_root};
+    use crate::hotp::{Hotp};
     use crate::{digest, Algorithm};
 
     #[test]
@@ -221,22 +183,78 @@ mod tests_verify {
         } else {
             vec![]
         };
-        let hotp = match generate_n_length_with_custom_digest(
-            key.clone(),
-            counter,
-            digits,
-            defined_digest.clone(),
-        ) {
+        let mut hotp = Hotp::new(key, 100);
+        hotp.of_n_length(digits);
+        hotp.with_digest(defined_digest.clone());
+        let pad = match hotp.generate() {
             Ok(h) => h,
             _ => String::from(""),
         };
         let verified = if let Ok(v) =
-            verify_delta_root(hotp, key, digits, 0, counter, defined_digest.clone())
+            hotp.verify(pad)
         {
             v
         } else {
             false
         };
         assert_eq!(true, verified);
+    }
+}
+
+#[cfg(test)]
+mod test_builder_pattern {
+    use crate::hotp::{Hotp};
+
+    #[test]
+    fn test_builder_pattern_default() {
+        let key = String::from("SuperSecretKey");
+        let counter = 100;
+        let hotp = Hotp::new(key, counter);
+        let pad = match hotp.generate() {
+            Ok(h) => h,
+            _ => String::from(""),
+        };
+        assert_eq!(pad.len(), 6);
+    }
+
+    #[test]
+    fn test_builder_pattern_n_length() {
+        let key = String::from("SuperSecretKey");
+        let counter = 100;
+        let mut hotp = Hotp::new(key, counter);
+        hotp.of_n_length(10);
+        let pad = match hotp.generate() {
+            Ok(h) => h,
+            _ => String::from(""),
+        };
+        assert_eq!(pad.len(), 10);
+    }
+
+    #[test]
+    fn test_builder_pattern_verify() {
+        let key = String::from("SuperSecretKey"); // Generates a otp of 0897822634
+        let counter = 100;
+        let mut hotp = Hotp::new(key, counter);
+        hotp.of_n_length(10);
+        let pad = match hotp.generate() {
+            Ok(h) => h,
+            _ => String::from(""),
+        };
+        let result_correct = if let Ok(v) =
+            hotp.verify(pad)
+        {
+            v
+        } else {
+            false
+        };
+        let result_fail = if let Ok(v) =
+            hotp.verify(String::from("This should not verify"))
+        {
+            v
+        } else {
+            false
+        };
+        assert_eq!(true, result_correct);
+        assert_eq!(false, result_fail);
     }
 }
