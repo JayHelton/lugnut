@@ -3,6 +3,7 @@ use crate::{digest, Algorithm, GenerationError};
 pub struct Hotp {
     key: String,
     counter: u128,
+    window: Option<u32>,
     digits: Option<u32>,
     digest: Option<Vec<u8>>,
 }
@@ -11,11 +12,12 @@ impl Hotp {
         Hotp {
             key,
             counter,
+            window: None,
             digits: None,
-            digest: None 
+            digest: None
         }
     }
-    pub fn of_n_length<'a>(&'a mut self, n: u32) -> &'a mut Hotp {
+    pub fn of_length<'a>(&'a mut self, n: u32) -> &'a mut Hotp {
         self.digits = Some(n);
         self
     }
@@ -23,14 +25,15 @@ impl Hotp {
         self.digest = Some(digest);
         self
     }
+    pub fn with_window<'a>(&'a mut self, window: u32) -> &'a mut Hotp {
+        self.window = Some(window);
+        self
+    }
     pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
         generate_root(self.key.clone(), self.counter, self.digits, self.digest.clone())
     }
     pub fn verify<'a>(&'a mut self, token: String) -> std::result::Result<bool, GenerationError> {
-        verify_delta_root(token, self.key.clone(), self.counter, self.digits, None, self.digest.clone())
-    }
-    pub fn verify_with_window<'a>(&'a mut self, token: String, window: u32) -> std::result::Result<bool, GenerationError> {
-        verify_delta_root(token, self.key.clone(), self.counter, self.digits, Some(window), self.digest.clone())
+        verify_delta_root(token, self.key.clone(), self.counter, self.digits, self.window, self.digest.clone())
     }
 }
 
@@ -159,7 +162,7 @@ mod tests_generate {
     fn test_generate_hotp_custom_length() {
         let key = generate_secret();
         let mut hotp = Hotp::new(key, 100);
-        hotp.of_n_length(50);
+        hotp.of_length(50);
         let pad = match hotp.generate() {
             Ok(h) => h,
             _ => String::from(""),
@@ -184,7 +187,7 @@ mod tests_verify {
             vec![]
         };
         let mut hotp = Hotp::new(key, 100);
-        hotp.of_n_length(digits);
+        hotp.of_length(digits);
         hotp.with_digest(defined_digest.clone());
         let pad = match hotp.generate() {
             Ok(h) => h,
@@ -222,7 +225,7 @@ mod test_builder_pattern {
         let key = String::from("SuperSecretKey");
         let counter = 100;
         let mut hotp = Hotp::new(key, counter);
-        hotp.of_n_length(10);
+        hotp.of_length(10);
         let pad = match hotp.generate() {
             Ok(h) => h,
             _ => String::from(""),
@@ -235,7 +238,7 @@ mod test_builder_pattern {
         let key = String::from("SuperSecretKey"); // Generates a otp of 0897822634
         let counter = 100;
         let mut hotp = Hotp::new(key, counter);
-        hotp.of_n_length(10);
+        hotp.of_length(10);
         let pad = match hotp.generate() {
             Ok(h) => h,
             _ => String::from(""),
