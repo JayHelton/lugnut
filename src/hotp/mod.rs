@@ -1,74 +1,44 @@
-use crate::{digest, generate, verify_delta, Algorithm, GenerationError};
+use crate::{Algorithm, GenerationError, digest, generate, verify_delta};
 
 pub struct Hotp {
     key: String,
     counter: u128,
-    digits: u32,
-    window: u32,
+    digits: Option<u32>,
     digest: Option<Vec<u8>>,
 }
-
 impl Hotp {
     pub fn new(key: String, counter: u128) -> Hotp {
         Hotp {
             key,
             counter,
-            digits: 6,
-            window: 10,
-            digest: None,
+            digits: None,
+            digest: None 
         }
     }
-
     pub fn of_n_length<'a>(&'a mut self, n: u32) -> &'a mut Hotp {
-        self.digits = n;
+        self.digits = Some(n);
         self
     }
-
     pub fn with_digest<'a>(&'a mut self, digest: Vec<u8>) -> &'a mut Hotp {
         self.digest = Some(digest);
         self
     }
-
-    pub fn with_window<'a>(&'a mut self, window: u32) -> &'a mut Hotp {
-        self.window = window;
-        self
-    }
-
     pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
-        let digest_hash = if let Some(d) = self.digest {
-            d
-        } else {
-            digest(self.key, self.counter, Algorithm::Sha1)?
-        };
-        generate(
-            self.key.clone(),
-            self.counter,
-            self.digits,
-            digest_hash.clone(),
-        )
+        generate(self.key.clone(), self.counter, self.digits, self.digest.clone())
     }
-
     pub fn verify<'a>(&'a mut self, token: String) -> std::result::Result<bool, GenerationError> {
-        let digest_hash = if let Some(d) = self.digest {
-            d
-        } else {
-            digest(self.key, self.counter, Algorithm::Sha1)?
-        };
-        verify_delta(
-            token,
-            self.key.clone(),
-            self.counter,
-            self.digits,
-            self.window,
-            digest_hash,
-        )
+      verify_delta(token, self.key.clone(), self.counter, self.digits, None, self.digest.clone())
+    }
+    pub fn verify_with_window<'a>(&'a mut self, token: String, window: u32) -> std::result::Result<bool, GenerationError> {
+      verify_delta(token, self.key.clone(), self.counter, self.digits, Some(window), self.digest.clone())
     }
 }
+
 
 #[cfg(test)]
 mod tests_generate {
     use crate::generate_secret;
-    use crate::hotp::Hotp;
+    use crate::hotp::{Hotp};
 
     #[test]
     fn test_generate_hotp_default() {
@@ -96,7 +66,7 @@ mod tests_generate {
 
 #[cfg(test)]
 mod tests_verify {
-    use crate::hotp::Hotp;
+    use crate::hotp::{Hotp};
     use crate::{digest, Algorithm};
 
     #[test]
@@ -116,7 +86,9 @@ mod tests_verify {
             Ok(h) => h,
             _ => String::from(""),
         };
-        let verified = if let Ok(v) = hotp.verify(pad) {
+        let verified = if let Ok(v) =
+            hotp.verify(pad)
+        {
             v
         } else {
             false
@@ -127,7 +99,7 @@ mod tests_verify {
 
 #[cfg(test)]
 mod test_builder_pattern {
-    use crate::hotp::Hotp;
+    use crate::hotp::{Hotp};
 
     #[test]
     fn test_builder_pattern_default() {
@@ -164,12 +136,16 @@ mod test_builder_pattern {
             Ok(h) => h,
             _ => String::from(""),
         };
-        let result_correct = if let Ok(v) = hotp.verify(pad) {
+        let result_correct = if let Ok(v) =
+            hotp.verify(pad)
+        {
             v
         } else {
             false
         };
-        let result_fail = if let Ok(v) = hotp.verify(String::from("This should not verify")) {
+        let result_fail = if let Ok(v) =
+            hotp.verify(String::from("This should not verify"))
+        {
             v
         } else {
             false

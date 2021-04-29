@@ -152,31 +152,38 @@ pub fn get_otp_auth_url() {}
 fn generate(
     key: String,
     counter: u128,
-    digits: u32,
-    digest: Vec<u8>,
+    digits: Option<u32>,
+    digest_arg: Option<Vec<u8>>,
 ) -> std::result::Result<String, GenerationError> {
-    let offset = if let Some(o) = digest.last() {
+    let defined_digits = if let Some(d) = digits { d } else { 6 };
+    let defined_digest = if let Some(d) = digest_arg {
+        d
+    } else {
+        digest(key, counter, Algorithm::Sha1)?
+    };
+
+    let offset = if let Some(o) = defined_digest.last() {
         o & 0xf
     } else {
         0
     };
 
-    let no_offset = if let Some(o) = digest.get(offset as usize) {
+    let no_offset = if let Some(o) = defined_digest.get(offset as usize) {
         u32::from(o.clone() & 0x7f) << 24
     } else {
         0
     };
-    let one_offset = if let Some(o) = digest.get((offset + 1) as usize) {
+    let one_offset = if let Some(o) = defined_digest.get((offset + 1) as usize) {
         u32::from(o.clone() & 0xff) << 16
     } else {
         0
     };
-    let two_offset = if let Some(o) = digest.get((offset + 2) as usize) {
+    let two_offset = if let Some(o) = defined_digest.get((offset + 2) as usize) {
         u32::from(o.clone() & 0xff) << 8
     } else {
         0
     };
-    let three_offset = if let Some(o) = digest.get((offset + 3) as usize) {
+    let three_offset = if let Some(o) = defined_digest.get((offset + 3) as usize) {
         u32::from(o.clone() & 0xff)
     } else {
         0
@@ -189,10 +196,10 @@ fn generate(
         let padded_string = format!(
             "{:0>width$}",
             code.to_string(),
-            width = digits as usize
+            width = defined_digits as usize
         );
         Ok(
-            (&padded_string[(padded_string.len() - digits as usize)..padded_string.len()])
+            (&padded_string[(padded_string.len() - defined_digits as usize)..padded_string.len()])
                 .to_string(),
         )
     }
@@ -203,20 +210,28 @@ fn verify_delta(
     token: String,
     key: String,
     counter: u128,
-    digits: u32,
-    window: u32,
-    digest: Vec<u8>,
+    digits: Option<u32>,
+    window: Option<u32>,
+    digest_arg: Option<Vec<u8>>,
 ) -> std::result::Result<bool, GenerationError> {
-    if token.len() as u32 != digits {
+    let defined_digits = if let Some(d) = digits { d } else { 6 };
+    let defined_window = if let Some(w) = window { w } else { 10 };
+    let defined_digest = if let Some(d) = digest_arg {
+        d
+    } else {
+        digest(key.clone(), counter, Algorithm::Sha1)?
+    };
+
+    if token.len() as u32 != defined_digits {
         return Ok(false);
     }
 
-    for i in counter..=counter + window as u128 {
+    for i in counter..=counter + defined_window as u128 {
         let test_otp = if let Ok(otp) = generate(
             key.clone(),
             i,
-            digits,
-            digest.clone(),
+            Some(defined_digits),
+            Some(defined_digest.clone()),
         ) {
             otp
         } else {

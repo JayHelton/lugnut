@@ -5,7 +5,6 @@ use crate::{generate, verify_delta, GenerationError};
 pub struct Totp {
     key: String,
     time_offset: Option<u64>,
-    step: Option<u64>,
     digest: Option<Vec<u8>>,
 }
 
@@ -14,18 +13,12 @@ impl Totp {
         Totp {
             key,
             time_offset: None,
-            step: Some(30),
             digest: None,
         }
     }
 
     pub fn with_time_offset<'a>(&'a mut self, offset: u64) -> &'a mut Totp {
         self.time_offset = Some(offset);
-        self
-    }
-
-    pub fn with_step<'a>(&'a mut self, step: u64) -> &'a mut Totp {
-        self.step = Some(step);
         self
     }
 
