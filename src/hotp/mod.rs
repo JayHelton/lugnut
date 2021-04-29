@@ -1,9 +1,10 @@
-use crate::{generate, verify_delta, GenerationError};
+use crate::{digest, generate, verify_delta, Algorithm, GenerationError};
 
 pub struct Hotp {
     key: String,
     counter: u128,
-    digits: Option<u32>,
+    digits: u32,
+    window: u32,
     digest: Option<Vec<u8>>,
 }
 
@@ -12,13 +13,14 @@ impl Hotp {
         Hotp {
             key,
             counter,
-            digits: None,
+            digits: 6,
+            window: 10,
             digest: None,
         }
     }
 
     pub fn of_n_length<'a>(&'a mut self, n: u32) -> &'a mut Hotp {
-        self.digits = Some(n);
+        self.digits = n;
         self
     }
 
@@ -27,38 +29,38 @@ impl Hotp {
         self
     }
 
+    pub fn with_window<'a>(&'a mut self, window: u32) -> &'a mut Hotp {
+        self.window = window;
+        self
+    }
+
     pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
+        let digest_hash = if let Some(d) = self.digest {
+            d
+        } else {
+            digest(self.key, self.counter, Algorithm::Sha1)?
+        };
         generate(
             self.key.clone(),
             self.counter,
             self.digits,
-            self.digest.clone(),
+            digest_hash.clone(),
         )
     }
 
     pub fn verify<'a>(&'a mut self, token: String) -> std::result::Result<bool, GenerationError> {
+        let digest_hash = if let Some(d) = self.digest {
+            d
+        } else {
+            digest(self.key, self.counter, Algorithm::Sha1)?
+        };
         verify_delta(
             token,
             self.key.clone(),
             self.counter,
             self.digits,
-            None,
-            self.digest.clone(),
-        )
-    }
-
-    pub fn verify_with_window<'a>(
-        &'a mut self,
-        token: String,
-        window: u32,
-    ) -> std::result::Result<bool, GenerationError> {
-        verify_delta(
-            token,
-            self.key.clone(),
-            self.counter,
-            self.digits,
-            Some(window),
-            self.digest.clone(),
+            self.window,
+            digest_hash,
         )
     }
 }
