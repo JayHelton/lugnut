@@ -5,6 +5,7 @@ use crate::{generate, verify_delta, GenerationError};
 pub struct Totp {
     key: String,
     time_offset: Option<u64>,
+    window: Option<u32>,
     digest: Option<Vec<u8>>,
 }
 
@@ -12,6 +13,7 @@ impl Totp {
     pub fn new(key: String) -> Totp {
         Totp {
             key,
+            window: None,
             time_offset: None,
             digest: None,
         }
@@ -19,6 +21,11 @@ impl Totp {
 
     pub fn with_time_offset<'a>(&'a mut self, offset: u64) -> &'a mut Totp {
         self.time_offset = Some(offset);
+        self
+    }
+
+    pub fn with_window<'a>(&'a mut self, window: u32) -> &'a mut Totp {
+        self.window = Some(window);
         self
     }
 
@@ -43,12 +50,12 @@ impl Totp {
             self.key.clone(),
             counter as u128,
             None,
-            Some(0), // TODO make window a parameter
+            self.window,
             self.digest.clone(),
         )
     }
 
-    fn get_counter<'a>(&'a self)  -> u64 {
+    fn get_counter<'a>(&'a self) -> u64 {
         let start = SystemTime::now();
         let epoch = start.duration_since(UNIX_EPOCH).unwrap();
         epoch.as_secs() / 30
