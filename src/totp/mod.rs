@@ -1,10 +1,12 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::{generate, verify_delta, GenerationError};
 
 pub struct Totp {
     key: String,
-    time_offset: Option<u64>,
+    epoch_time_offset: Option<u64>,
+    time: Option<u64>,
+    step: u64,
     window: Option<u32>,
     digest: Option<Vec<u8>>,
 }
@@ -13,14 +15,16 @@ impl Totp {
     pub fn new(key: String) -> Totp {
         Totp {
             key,
-            window: None,
-            time_offset: None,
+            window: Some(60),
+            epoch_time_offset: None,
+            time: None,
+            step: 30,
             digest: None,
         }
     }
 
-    pub fn with_time_offset<'a>(&'a mut self, offset: u64) -> &'a mut Totp {
-        self.time_offset = Some(offset);
+    pub fn with_epoch__time_offset<'a>(&'a mut self, offset: u64) -> &'a mut Totp {
+        self.epoch_time_offset = Some(offset);
         self
     }
 
@@ -56,9 +60,19 @@ impl Totp {
     }
 
     fn get_counter<'a>(&'a self) -> u64 {
-        let start = SystemTime::now();
-        let epoch = start.duration_since(UNIX_EPOCH).unwrap();
-        epoch.as_secs() / 30
+        let end = if let Some(t) = self.time {
+            UNIX_EPOCH + Duration::from_secs(t)
+        } else {
+            SystemTime::now()
+        };
+        let start = if let Some(e) = self.epoch_time_offset {
+            UNIX_EPOCH + Duration::from_secs(e)
+        } else {
+            UNIX_EPOCH
+        };
+
+        let epoch = end.duration_since(start).unwrap();
+        epoch.as_secs() / self.step 
     }
 }
 
