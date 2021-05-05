@@ -3,7 +3,7 @@ use crate::{GenerationError, generate, verify_delta};
 pub struct Hotp {
     key: String,
     counter: u128,
-    window: Option<u32>,
+    window: Option<u64>,
     digits: Option<u32>,
     digest: Option<Vec<u8>>,
 }
@@ -25,7 +25,7 @@ impl Hotp {
         self.digest = Some(digest);
         self
     }
-    pub fn with_window<'a>(&'a mut self, window: u32) -> &'a mut Hotp {
+    pub fn with_window<'a>(&'a mut self, window: u64) -> &'a mut Hotp {
         self.window = Some(window);
         self
     }

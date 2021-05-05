@@ -57,7 +57,7 @@ static SYMBOL_SET: [char; 22] = [
 /// ```
 /// use lugnut::{ digest, Algorithm };
 /// let hash = digest("My secret".to_string(), 5000, Algorithm::Sha1);
-/// ```
+///
 pub fn digest(
     secret: String,
     counter: u128,
@@ -211,7 +211,7 @@ fn verify_delta(
     key: String,
     counter: u128,
     digits: Option<u32>,
-    window: Option<u32>,
+    window: Option<u64>,
     digest_arg: Option<Vec<u8>>,
 ) -> std::result::Result<bool, GenerationError> {
     let defined_digits = if let Some(d) = digits { d } else { 6 };
