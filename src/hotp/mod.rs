@@ -60,7 +60,7 @@ mod tests_generate {
     #[test]
     fn test_generate_hotp_default() {
         let key = generate_secret();
-        let mut hotp = Hotp::new();
+        let hotp = Hotp::new();
         let pad = match hotp.generate(key, 100) {
             Ok(h) => h,
             _ => String::from(""),
