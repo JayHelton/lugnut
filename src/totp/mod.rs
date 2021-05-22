@@ -102,12 +102,14 @@ impl Totp {
     /// let mut totp_builder = Totp::new("my secret".to_string());
     /// let code = totp_builder.generate();
     /// ```
-    pub fn generate<'a>(&'a mut self) -> std::result::Result<String, GenerationError> {
+    pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
         let counter = self.get_counter() as u128;
-        if self.digest.is_empty() {
-            self.digest = digest(self.key.clone(), counter, Algorithm::Sha1)?;
-        }
-        generate(self.key.clone(), counter, 6, self.digest.clone())
+        let hash = if self.digest.is_empty() {
+            digest(self.key.clone(), counter, Algorithm::Sha1)?
+        } else {
+            self.digest.clone()
+        };
+        generate(self.key.clone(), counter, 6, hash)
     }
 
     /// Verify a Time-based OTP.
@@ -119,19 +121,21 @@ impl Totp {
     /// let mut totp_builder = Totp::new("my secret".to_string());
     /// let verified = totp_builder.verify("1234".to_string());
     /// ```
-    pub fn verify<'a>(&'a mut self, token: String) -> std::result::Result<bool, GenerationError> {
+    pub fn verify<'a>(&'a self, token: String) -> std::result::Result<bool, GenerationError> {
         let counter = self.get_counter();
         let windowed_counter = (counter - self.window) as u128;
-        if self.digest.is_empty() {
-            self.digest = digest(self.key.clone(), windowed_counter, Algorithm::Sha1)?;
-        }
+        let hash = if self.digest.is_empty() {
+            digest(self.key.clone(), windowed_counter, Algorithm::Sha1)?
+        } else {
+            self.digest.clone()
+        };
         verify_delta(
             token,
             self.key.clone(),
             windowed_counter,
             6,
             self.window + self.window,
-            self.digest.clone(),
+            hash,
         )
     }
 

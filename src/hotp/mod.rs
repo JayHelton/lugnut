@@ -29,28 +29,32 @@ impl Hotp {
         self.window = window;
         self
     }
-    pub fn generate<'a>(&'a mut self) -> std::result::Result<String, GenerationError> {
-        if self.digest.is_empty() {
-            self.digest = digest(self.key.clone(), self.counter, Algorithm::Sha1)?;
-        }
+    pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
+        let hash = if self.digest.is_empty() {
+            digest(self.key.clone(), self.counter, Algorithm::Sha1)?
+        } else {
+            self.digest.clone()
+        };
         generate(
             self.key.clone(),
             self.counter,
             self.digits,
-            self.digest.clone(),
+            hash,
         )
     }
-    pub fn verify<'a>(&'a mut self, token: String) -> std::result::Result<bool, GenerationError> {
-        if self.digest.is_empty() {
-            self.digest = digest(self.key.clone(), self.counter, Algorithm::Sha1)?;
-        }
+    pub fn verify<'a>(&'a self, token: String) -> std::result::Result<bool, GenerationError> {
+        let hash = if self.digest.is_empty() {
+            digest(self.key.clone(), self.counter, Algorithm::Sha1)?
+        } else {
+            self.digest.clone()
+        };
         verify_delta(
             token,
             self.key.clone(),
             self.counter,
             self.digits,
             self.window,
-            self.digest.clone(),
+            hash,
         )
     }
 }
