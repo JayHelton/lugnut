@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{generate, verify_delta, GenerationError};
+use crate::{digest, generate, verify_delta, Algorithm, GenerationError};
 
 pub struct Totp {
     key: String,
@@ -8,7 +8,7 @@ pub struct Totp {
     time: u64,
     step: u64,
     window: u64,
-    digest: Option<Vec<u8>>,
+    digest: Vec<u8>,
 }
 
 impl Totp {
@@ -21,8 +21,8 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::{ totp };
-    /// let totp_builder = totp::new('my secret');
+    /// use lugnut::totp::Totp;
+    /// let mut totp_builder = Totp::new("my secret".to_string());
     /// ```
     pub fn new(key: String) -> Totp {
         Totp {
@@ -31,7 +31,7 @@ impl Totp {
             epoch_time_offset: 0,
             time: 0,
             step: 30,
-            digest: None,
+            digest: Vec::new(),
         }
     }
 
@@ -45,8 +45,8 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::{ totp };
-    /// let totp_builder = totp::new('my secret');
+    /// use lugnut::totp::Totp;
+    /// let mut totp_builder = Totp::new("my secret".to_string());
     /// totp_builder.with_epoch_time_offset(500);
     /// ```
     pub fn with_epoch_time_offset<'a>(&'a mut self, offset: u64) -> &'a mut Totp {
@@ -66,8 +66,8 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::{ totp };
-    /// let totp_builder = totp::new('my secret');
+    /// use lugnut::totp::Totp;
+    /// let mut totp_builder = Totp::new("my secret".to_string());
     /// totp_builder.with_window(5);
     /// ```
     pub fn with_window<'a>(&'a mut self, window: u64) -> &'a mut Totp {
@@ -84,12 +84,12 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::{ totp };
-    /// let totp_builder = totp::new('my secret');
+    /// use lugnut::totp::Totp;
+    /// let mut totp_builder = Totp::new("my secret".to_string());
     /// totp_builder.with_digest(vec![1, 2, 3, 4]);
     /// ```
     pub fn with_digest<'a>(&'a mut self, digest: Vec<u8>) -> &'a mut Totp {
-        self.digest = Some(digest);
+        self.digest = digest;
         self
     }
 
@@ -98,17 +98,16 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::{ totp };
-    /// let totp_builder = totp::new('my secret');
+    /// use lugnut::totp::Totp;
+    /// let mut totp_builder = Totp::new("my secret".to_string());
     /// let code = totp_builder.generate();
     /// ```
-    pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
-        generate(
-            self.key.clone(),
-            self.get_counter() as u128,
-            None,
-            self.digest.clone(),
-        )
+    pub fn generate<'a>(&'a mut self) -> std::result::Result<String, GenerationError> {
+        let counter = self.get_counter() as u128;
+        if self.digest.is_empty() {
+            self.digest = digest(self.key.clone(), counter, Algorithm::Sha1)?;
+        }
+        generate(self.key.clone(), counter, 6, self.digest.clone())
     }
 
     /// Verify a Time-based OTP.
@@ -116,19 +115,22 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::{ totp };
-    /// let totp_builder = totp::new('my secret');
-    /// let verified = totp_builder.verify(user_input);
+    /// use lugnut::totp::Totp;
+    /// let mut totp_builder = Totp::new("my secret".to_string());
+    /// let verified = totp_builder.verify("1234".to_string());
     /// ```
     pub fn verify<'a>(&'a mut self, token: String) -> std::result::Result<bool, GenerationError> {
         let counter = self.get_counter();
-        let windowed_counter = counter - self.window;
+        let windowed_counter = (counter - self.window) as u128;
+        if self.digest.is_empty() {
+            self.digest = digest(self.key.clone(), windowed_counter, Algorithm::Sha1)?;
+        }
         verify_delta(
             token,
             self.key.clone(),
-            windowed_counter as u128,
-            None,
-            Some(self.window + self.window),
+            windowed_counter,
+            6,
+            self.window + self.window,
             self.digest.clone(),
         )
     }
