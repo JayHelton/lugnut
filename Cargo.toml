@@ -1,8 +1,8 @@
 [package]
 name = "lugnut"
-version = "0.0.1"
+version = "0.0.2"
 license = "MIT"
-description = "Coming Soon"
+description = "An OTP Generator for Rust"
 homepage = "https://github.com/JayHelton/lugnut"
 documentation = "https://github.com/JayHelton/lugnut"
 readme = "README.md"
