@@ -25,33 +25,30 @@ impl Hotp {
         self.window = window;
         self
     }
-    pub fn generate<'a>(&'a self,key: String, counter: u128) -> std::result::Result<String, GenerationError> {
+    pub fn generate<'a>(
+        &'a self,
+        key: String,
+        counter: u128,
+    ) -> std::result::Result<String, GenerationError> {
         let hash = if self.digest.is_empty() {
             digest(key.clone(), counter, Algorithm::Sha1)?
         } else {
             self.digest.clone()
         };
-        generate(
-            key,
-            counter,
-            self.digits,
-            hash,
-        )
+        generate(key, counter, self.digits, hash)
     }
-    pub fn verify<'a>(&'a self, token: String,key: String, counter: u128) -> std::result::Result<bool, GenerationError> {
+    pub fn verify<'a>(
+        &'a self,
+        token: String,
+        key: String,
+        counter: u128,
+    ) -> std::result::Result<bool, GenerationError> {
         let hash = if self.digest.is_empty() {
             digest(key.clone(), counter, Algorithm::Sha1)?
         } else {
             self.digest.clone()
         };
-        verify_delta(
-            token,
-            key,
-            counter,
-            self.digits,
-            self.window,
-            hash,
-        )
+        verify_delta(token, key, counter, self.digits, self.window, hash)
     }
 }
 
@@ -159,11 +156,12 @@ mod test_builder_pattern {
         } else {
             false
         };
-        let result_fail = if let Ok(v) = hotp.verify(String::from("This should not verify"), key, counter) {
-            v
-        } else {
-            false
-        };
+        let result_fail =
+            if let Ok(v) = hotp.verify(String::from("This should not verify"), key, counter) {
+                v
+            } else {
+                false
+            };
         assert_eq!(true, result_correct);
         assert_eq!(false, result_fail);
     }

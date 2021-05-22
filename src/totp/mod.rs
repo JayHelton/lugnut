@@ -101,7 +101,7 @@ impl Totp {
     /// let mut totp_builder = Totp::new();
     /// let code = totp_builder.generate(key);
     /// ```
-    pub fn generate<'a>(&'a self,key: String) -> std::result::Result<String, GenerationError> {
+    pub fn generate<'a>(&'a self, key: String) -> std::result::Result<String, GenerationError> {
         let counter = self.get_counter() as u128;
         let hash = if self.digest.is_empty() {
             digest(key.clone(), counter, Algorithm::Sha1)?
@@ -121,7 +121,11 @@ impl Totp {
     /// let mut totp_builder = Totp::new();
     /// let verified = totp_builder.verify("1234".to_string(), key);
     /// ```
-    pub fn verify<'a>(&'a self, token: String, key: String) -> std::result::Result<bool, GenerationError> {
+    pub fn verify<'a>(
+        &'a self,
+        token: String,
+        key: String,
+    ) -> std::result::Result<bool, GenerationError> {
         let counter = self.get_counter();
         let windowed_counter = (counter - self.window) as u128;
         let hash = if self.digest.is_empty() {
@@ -173,7 +177,9 @@ mod totp_tests {
         let key = "my secret key".to_string();
         let totp = Totp::new();
         let _code = totp.generate(key.clone()).expect("borked");
-        let verified = totp.verify("wrong".to_string(), key).expect("borked here too");
+        let verified = totp
+            .verify("wrong".to_string(), key)
+            .expect("borked here too");
         assert!(!verified);
     }
 }

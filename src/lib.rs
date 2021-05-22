@@ -207,7 +207,7 @@ fn verify_delta(
         return Ok(false);
     }
 
-    for i in counter..=counter + window as u128 {
+    for _ in counter..=counter + window as u128 {
         let test_otp = generate(key.clone(), counter, digits, digest_hash.clone())?;
         if test_otp == token {
             return Ok(true);
@@ -258,7 +258,7 @@ fn generate_secret_ascii(length: u32, symbols: bool) -> String {
 }
 
 #[doc(hidden)]
-fn encodeURIComponent(string: String) -> String {
+fn encode_uri_component(string: String) -> String {
     byte_serialize(string.as_bytes()).collect()
 }
 
@@ -283,8 +283,7 @@ mod digest_tests {
 #[cfg(test)]
 mod generate_secret_tests {
     use crate::{
-        generate_secret, generate_secret_ascii, generate_secret_without_symbols,
-        generate_sized_secret, SYMBOL_SET,
+        generate_secret_ascii, generate_secret_without_symbols, generate_sized_secret, SYMBOL_SET,
     };
 
     #[test]
