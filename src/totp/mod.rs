@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{digest, generate, verify_delta, Algorithm, GenerationError};
+use crate::{digest, generate_otp, verify_delta, Algorithm, GenerationError};
 
 pub struct Totp {
     epoch_time_offset: u64,
@@ -108,7 +108,7 @@ impl Totp {
         } else {
             self.digest.clone()
         };
-        generate(key, counter, 6, hash)
+        generate_otp(6, hash)
     }
 
     /// Verify a Time-based OTP.
@@ -135,7 +135,6 @@ impl Totp {
         };
         verify_delta(
             token,
-            key,
             windowed_counter,
             6,
             self.window + self.window,

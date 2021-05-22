@@ -149,9 +149,7 @@ pub fn get_otp_auth_url() {}
 /// 4.  Same as (2.) but taking the bits from (offset + 3)
 /// 5.  OR'ing each of these u32 so that we collapse all of the set bits into one u32
 #[doc(hidden)]
-fn generate(
-    key: String,
-    counter: u128,
+fn generate_otp(
     digits: u32,
     digest_hash: Vec<u8>,
 ) -> std::result::Result<String, GenerationError> {
@@ -184,6 +182,7 @@ fn generate(
     let code = no_offset | one_offset | two_offset | three_offset;
 
     if code == 0 {
+        // This is very unlikely to happen, but as a precaution we will return an Err
         Err(GenerationError::FailedToGenerateOTP())
     } else {
         let padded_string = format!("{:0>width$}", code.to_string(), width = digits as usize);
@@ -197,7 +196,6 @@ fn generate(
 #[doc(hidden)]
 fn verify_delta(
     token: String,
-    key: String,
     counter: u128,
     digits: u32,
     window: u64,
@@ -208,7 +206,7 @@ fn verify_delta(
     }
 
     for _ in counter..=counter + window as u128 {
-        let test_otp = generate(key.clone(), counter, digits, digest_hash.clone())?;
+        let test_otp = generate_otp(digits, digest_hash.clone())?;
         if test_otp == token {
             return Ok(true);
         }

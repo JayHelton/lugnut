@@ -1,4 +1,4 @@
-use crate::{digest, generate, verify_delta, Algorithm, GenerationError};
+use crate::{digest, generate_otp, verify_delta, Algorithm, GenerationError};
 
 pub struct Hotp {
     window: u64,
@@ -35,7 +35,7 @@ impl Hotp {
         } else {
             self.digest.clone()
         };
-        generate(key, counter, self.digits, hash)
+        generate_otp(self.digits, hash)
     }
     pub fn verify<'a>(
         &'a self,
@@ -48,7 +48,7 @@ impl Hotp {
         } else {
             self.digest.clone()
         };
-        verify_delta(token, key, counter, self.digits, self.window, hash)
+        verify_delta(token, counter, self.digits, self.window, hash)
     }
 }
 
