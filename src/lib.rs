@@ -9,8 +9,11 @@ type HmacSha1 = Hmac<Sha1>;
 type HmacSha256 = Hmac<Sha256>;
 type HmacSha512 = Hmac<Sha512>;
 
-pub mod hotp;
-pub mod totp;
+mod hotp;
+mod totp;
+
+pub use totp::Totp;
+pub use hotp::Hotp;
 
 /// GenerationError enumerates all possible errors returned by this library.
 #[derive(Error, Debug)]
