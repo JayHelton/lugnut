@@ -35,8 +35,8 @@ let key = String::from("SuperSecretKey");
 let counter = 100;
 
 let mut hotp = Hotp::new(key, counter);
-let code = totp.generate().expect("error generating hotp");
-let verified = totp.verify(code).expect("error verifying hotp");
+let code = hotp.generate().expect("error generating hotp");
+let verified = hotp.verify(code).expect("error verifying hotp");
 
 assert!(verified);
 ```
