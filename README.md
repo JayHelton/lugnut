@@ -34,9 +34,9 @@ use lugnut::hotp::Hotp;
 let key = String::from("SuperSecretKey");
 let counter = 100;
 
-let mut hotp = Hotp::new(key, counter);
-let code = hotp.generate().expect("error generating hotp");
-let verified = hotp.verify(code).expect("error verifying hotp");
+let mut hotp = Hotp::new();
+let code = hotp.generate(key, counter).expect("error generating hotp");
+let verified = hotp.verify(code, key, counter).expect("error verifying hotp");
 
 assert!(verified);
 ```
@@ -47,9 +47,9 @@ use lugnut::totp::Totp;
 
 let key = String::from("SuperSecretKey");
 
-let mut totp = Totp::new(key);
-let code = totp.generate().expect("error generating totp");
-let verified = totp.verify(code).expect("error verifying totp");
+let mut totp = Totp::new();
+let code = totp.generate(key).expect("error generating totp");
+let verified = totp.verify(code, key).expect("error verifying totp");
 assert!(verified);
 ```
 

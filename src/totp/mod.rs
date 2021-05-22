@@ -3,7 +3,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::{digest, generate, verify_delta, Algorithm, GenerationError};
 
 pub struct Totp {
-    key: String,
     epoch_time_offset: u64,
     time: u64,
     step: u64,
@@ -22,11 +21,10 @@ impl Totp {
     ///
     /// ```
     /// use lugnut::totp::Totp;
-    /// let mut totp_builder = Totp::new("my secret".to_string());
+    /// let mut totp_builder = Totp::new();
     /// ```
-    pub fn new(key: String) -> Totp {
+    pub fn new() -> Totp {
         Totp {
-            key,
             window: 0,
             epoch_time_offset: 0,
             time: 0,
@@ -46,7 +44,7 @@ impl Totp {
     ///
     /// ```
     /// use lugnut::totp::Totp;
-    /// let mut totp_builder = Totp::new("my secret".to_string());
+    /// let mut totp_builder = Totp::new();
     /// totp_builder.with_epoch_time_offset(500);
     /// ```
     pub fn with_epoch_time_offset<'a>(&'a mut self, offset: u64) -> &'a mut Totp {
@@ -67,7 +65,7 @@ impl Totp {
     ///
     /// ```
     /// use lugnut::totp::Totp;
-    /// let mut totp_builder = Totp::new("my secret".to_string());
+    /// let mut totp_builder = Totp::new();
     /// totp_builder.with_window(5);
     /// ```
     pub fn with_window<'a>(&'a mut self, window: u64) -> &'a mut Totp {
@@ -85,7 +83,7 @@ impl Totp {
     ///
     /// ```
     /// use lugnut::totp::Totp;
-    /// let mut totp_builder = Totp::new("my secret".to_string());
+    /// let mut totp_builder = Totp::new();
     /// totp_builder.with_digest(vec![1, 2, 3, 4]);
     /// ```
     pub fn with_digest<'a>(&'a mut self, digest: Vec<u8>) -> &'a mut Totp {
@@ -99,17 +97,18 @@ impl Totp {
     ///
     /// ```
     /// use lugnut::totp::Totp;
-    /// let mut totp_builder = Totp::new("my secret".to_string());
-    /// let code = totp_builder.generate();
+    /// let key = "my secret key".to_string();
+    /// let mut totp_builder = Totp::new();
+    /// let code = totp_builder.generate(key);
     /// ```
-    pub fn generate<'a>(&'a self) -> std::result::Result<String, GenerationError> {
+    pub fn generate<'a>(&'a self,key: String) -> std::result::Result<String, GenerationError> {
         let counter = self.get_counter() as u128;
         let hash = if self.digest.is_empty() {
-            digest(self.key.clone(), counter, Algorithm::Sha1)?
+            digest(key.clone(), counter, Algorithm::Sha1)?
         } else {
             self.digest.clone()
         };
-        generate(self.key.clone(), counter, 6, hash)
+        generate(key, counter, 6, hash)
     }
 
     /// Verify a Time-based OTP.
@@ -118,20 +117,21 @@ impl Totp {
     ///
     /// ```
     /// use lugnut::totp::Totp;
-    /// let mut totp_builder = Totp::new("my secret".to_string());
-    /// let verified = totp_builder.verify("1234".to_string());
+    /// let key = "my secret key".to_string();
+    /// let mut totp_builder = Totp::new();
+    /// let verified = totp_builder.verify("1234".to_string(), key);
     /// ```
-    pub fn verify<'a>(&'a self, token: String) -> std::result::Result<bool, GenerationError> {
+    pub fn verify<'a>(&'a self, token: String, key: String) -> std::result::Result<bool, GenerationError> {
         let counter = self.get_counter();
         let windowed_counter = (counter - self.window) as u128;
         let hash = if self.digest.is_empty() {
-            digest(self.key.clone(), windowed_counter, Algorithm::Sha1)?
+            digest(key.clone(), windowed_counter, Algorithm::Sha1)?
         } else {
             self.digest.clone()
         };
         verify_delta(
             token,
-            self.key.clone(),
+            key,
             windowed_counter,
             6,
             self.window + self.window,
@@ -161,17 +161,19 @@ mod totp_tests {
 
     #[test]
     fn assert_correct_otp() {
-        let mut totp = Totp::new("my secret key".to_string());
-        let code = totp.generate().expect("borked");
-        let verified = totp.verify(code).expect("borked here too");
+        let key = "my secret key".to_string();
+        let totp = Totp::new();
+        let code = totp.generate(key.clone()).expect("borked");
+        let verified = totp.verify(code, key).expect("borked here too");
         assert!(verified);
     }
 
     #[test]
     fn assert_incorrect_otp() {
-        let mut totp = Totp::new("my secret key".to_string());
-        let _code = totp.generate().expect("borked");
-        let verified = totp.verify("wrong".to_string()).expect("borked here too");
+        let key = "my secret key".to_string();
+        let totp = Totp::new();
+        let _code = totp.generate(key.clone()).expect("borked");
+        let verified = totp.verify("wrong".to_string(), key).expect("borked here too");
         assert!(!verified);
     }
 }
