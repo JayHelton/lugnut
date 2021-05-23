@@ -8,7 +8,7 @@ documentation = "https://github.com/JayHelton/lugnut"
 readme = "README.md"
 authors = ["jayhelton <jaydhelton@gmail.com>", "kevinburchfield <kevinburchfi@gmail.com>"]
 edition = "2018"
-keywords = ["one-time passowrd", "otp", "hotp", "totp", "2fa"]
+keywords = ["one-time-password", "otp", "hotp", "totp", "2fa"]
 
 [dependencies]
 rand = "0.8.3"
