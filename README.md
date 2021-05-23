@@ -60,8 +60,6 @@ assert!(verified);
   <li>Support for forward and backward window configuration for TOTP (currently only support one value that is used for both</li>
 </ul>
 
-<h3>Contributing</h3>
-Contributors are always welcome! I would love new ideas and thoughts.
 <br/><br/>
 <h3>License</h3>
 This project is licensed under the MIT License
