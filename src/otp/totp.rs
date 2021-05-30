@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use crate::{digest, generate_otp, verify_delta, Algorithm, GenerationError};
+use crate::otp::{digest, generate_otp, verify_delta, Algorithm, GenerationError};
 
 pub struct Totp {
     epoch_time_offset: u64,

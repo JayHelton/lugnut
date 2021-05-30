@@ -1,4 +1,4 @@
-use crate::{digest, generate_otp, verify_delta, Algorithm, GenerationError};
+use crate::otp::{digest, generate_otp, verify_delta, Algorithm, GenerationError};
 
 pub struct Hotp {
     window: u64,
