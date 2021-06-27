@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 pub mod generate;
 pub mod verify;
@@ -9,20 +8,20 @@ pub mod verify;
 pub enum PublicKeyCredentialType {
     PublicKey,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum ResidentKeyRequirement {
     Discouraged,
     Preferred,
     Required,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub enum AuthenticatorAttachment {
     CrossPlatform,
     Platform,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum UserVerificationRequirement {
     Discouraged,
@@ -54,7 +53,7 @@ pub struct GenerateAssertionOptions {
     timeout: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticatorSelectionCriteria {
     authenticator_attachment: Option<AuthenticatorAttachment>,
@@ -84,7 +83,7 @@ pub struct AuthenticationExtensionsClientInputs {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialParameters {
-    alg: usize,
+    alg: i32,
     #[serde(rename(serialize = "type", deserialize = "credential_type"))]
     credential_type: PublicKeyCredentialType,
 }
@@ -100,20 +99,21 @@ pub struct PublicKeyCredentialRpEntity {
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialUserEntity {
     id: String,
+    display_name: Option<String>,
     name: String,
-    display_name: String,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialCreationOptions {
-    attestation: Option<AttestationConveyancePreference>,
-    authenticator_selection: Option<AuthenticatorSelectionCriteria>,
-    challenge: String,
+    rp: PublicKeyCredentialRpEntity,                         // required
+    user: PublicKeyCredentialUserEntity,                     // required
+    challenge: String,                                       // required
+    pub_key_cred_params: Vec<PublicKeyCredentialParameters>, // required
+    // Optional
     exclude_credentials: Option<Vec<PublicKeyCredentialDescriptor>>,
     extensions: Option<AuthenticationExtensionsClientInputs>,
-    pub_key_cred_params: Vec<PublicKeyCredentialParameters>,
-    rp: PublicKeyCredentialRpEntity,
+    attestation: Option<AttestationConveyancePreference>,
+    authenticator_selection: Option<AuthenticatorSelectionCriteria>,
     timeout: Option<usize>,
-    user: PublicKeyCredentialUserEntity,
 }
