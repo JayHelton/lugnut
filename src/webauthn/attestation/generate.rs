@@ -1,7 +1,7 @@
 use base64;
 use serde::{Deserialize, Serialize};
 
-use super::{
+use crate::webauthn::{
     AttestationConveyancePreference, AuthenticationExtensionsClientInputs,
     AuthenticatorSelectionCriteria, PublicKeyCredentialCreationOptions,
     PublicKeyCredentialDescriptor, PublicKeyCredentialParameters, PublicKeyCredentialRpEntity,
