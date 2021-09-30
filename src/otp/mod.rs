@@ -59,7 +59,7 @@ static SYMBOL_SET: [char; 22] = [
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ digest, Algorithm };
+/// use lugnut::otp::{ digest, Algorithm };
 /// let hash = digest("My secret".to_string(), 5000, Algorithm::Sha1);
 ///
 pub fn digest(
@@ -99,7 +99,7 @@ pub fn digest(
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ generate_secret };
+/// use lugnut::otp::{ generate_secret };
 /// let secret_key = generate_secret();
 /// ```
 pub fn generate_secret() -> String {
@@ -111,7 +111,7 @@ pub fn generate_secret() -> String {
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ generate_sized_secret };
+/// use lugnut::otp::{ generate_sized_secret };
 /// let secret_key = generate_sized_secret(100);
 /// ```
 pub fn generate_sized_secret(length: u32) -> String {
@@ -123,7 +123,7 @@ pub fn generate_sized_secret(length: u32) -> String {
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ generate_secret_without_symbols };
+/// use lugnut::otp::{ generate_secret_without_symbols };
 /// let secret_key = generate_secret_without_symbols();
 /// ```
 pub fn generate_secret_without_symbols() -> String {
@@ -135,7 +135,7 @@ pub fn generate_secret_without_symbols() -> String {
 /// # Examples
 ///
 /// ```
-/// use lugnut::{ generate_secret_without_symbols };
+/// use lugnut::otp::{ generate_secret_without_symbols };
 /// let secret_key = generate_secret_without_symbols();
 /// ```
 pub fn generate_sized_secret_without_symbols(length: u32) -> String {
@@ -153,10 +153,7 @@ pub fn get_otp_auth_url() {}
 /// 4.  Same as (2.) but taking the bits from (offset + 3)
 /// 5.  OR'ing each of these u32 so that we collapse all of the set bits into one u32
 #[doc(hidden)]
-fn generate_otp(
-    digits: u32,
-    digest_hash: Vec<u8>,
-) -> std::result::Result<String, GenerationError> {
+fn generate_otp(digits: u32, digest_hash: Vec<u8>) -> std::result::Result<String, GenerationError> {
     let offset = if let Some(o) = digest_hash.last() {
         o & 0xf
     } else {
@@ -269,8 +266,8 @@ fn generate_otpauth_url() {}
 
 #[cfg(test)]
 mod digest_tests {
-    use crate::digest;
-    use crate::Algorithm::Sha1;
+    use crate::otp::digest;
+    use crate::otp::Algorithm::Sha1;
 
     #[test]
     fn it_works() {
@@ -284,7 +281,7 @@ mod digest_tests {
 
 #[cfg(test)]
 mod generate_secret_tests {
-    use crate::{
+    use crate::otp::{
         generate_secret_ascii, generate_secret_without_symbols, generate_sized_secret, SYMBOL_SET,
     };
 

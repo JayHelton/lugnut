@@ -2,32 +2,32 @@ use serde::{Deserialize, Serialize};
 
 pub mod attestation;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum PublicKeyCredentialType {
     PublicKey,
 }
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum ResidentKeyRequirement {
     Discouraged,
     Preferred,
     Required,
 }
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub enum AuthenticatorAttachment {
     CrossPlatform,
     Platform,
 }
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum UserVerificationRequirement {
     Discouraged,
     Preferred,
     Required,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AuthenticatorTransport {
     Ble,
@@ -35,7 +35,7 @@ pub enum AuthenticatorTransport {
     Nfc,
     Usb,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AttestationConveyancePreference {
     Direct,
@@ -44,7 +44,7 @@ pub enum AttestationConveyancePreference {
     None,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateAssertionOptions {
     rp_id: String,
@@ -52,16 +52,19 @@ pub struct GenerateAssertionOptions {
     timeout: usize,
 }
 
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Copy, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticatorSelectionCriteria {
+    #[serde(skip_serializing_if = "Option::is_none")]
     authenticator_attachment: Option<AuthenticatorAttachment>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     require_resident_key: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     resident_key: Option<ResidentKeyRequirement>,
     user_verification: Option<UserVerificationRequirement>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialDescriptor {
     id: String,
@@ -70,7 +73,7 @@ pub struct PublicKeyCredentialDescriptor {
     credential_type: PublicKeyCredentialType,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticationExtensionsClientInputs {
     appid: Option<String>,
@@ -79,7 +82,7 @@ pub struct AuthenticationExtensionsClientInputs {
     uvm: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialParameters {
     alg: i32,
@@ -87,14 +90,14 @@ pub struct PublicKeyCredentialParameters {
     credential_type: PublicKeyCredentialType,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialRpEntity {
     id: String,
     name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialUserEntity {
     id: String,
@@ -102,7 +105,7 @@ pub struct PublicKeyCredentialUserEntity {
     name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicKeyCredentialCreationOptions {
     rp: PublicKeyCredentialRpEntity,                         // required

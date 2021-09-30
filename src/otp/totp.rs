@@ -20,7 +20,7 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::totp::Totp;
+    /// use lugnut::otp::Totp;
     /// let mut totp_builder = Totp::new();
     /// ```
     pub fn new() -> Totp {
@@ -43,7 +43,7 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::totp::Totp;
+    /// use lugnut::otp::Totp;
     /// let mut totp_builder = Totp::new();
     /// totp_builder.with_epoch_time_offset(500);
     /// ```
@@ -64,7 +64,7 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::totp::Totp;
+    /// use lugnut::otp::Totp;
     /// let mut totp_builder = Totp::new();
     /// totp_builder.with_window(5);
     /// ```
@@ -82,7 +82,7 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::totp::Totp;
+    /// use lugnut::otp::Totp;
     /// let mut totp_builder = Totp::new();
     /// totp_builder.with_digest(vec![1, 2, 3, 4]);
     /// ```
@@ -96,7 +96,7 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::totp::Totp;
+    /// use lugnut::otp::Totp;
     /// let key = "my secret key".to_string();
     /// let mut totp_builder = Totp::new();
     /// let code = totp_builder.generate(key);
@@ -116,7 +116,7 @@ impl Totp {
     /// # Examples
     ///
     /// ```
-    /// use lugnut::totp::Totp;
+    /// use lugnut::otp::Totp;
     /// let key = "my secret key".to_string();
     /// let mut totp_builder = Totp::new();
     /// let verified = totp_builder.verify("1234".to_string(), key);
@@ -133,13 +133,7 @@ impl Totp {
         } else {
             self.digest.clone()
         };
-        verify_delta(
-            token,
-            windowed_counter,
-            6,
-            self.window + self.window,
-            hash,
-        )
+        verify_delta(token, windowed_counter, 6, self.window + self.window, hash)
     }
 
     #[doc(hidden)]

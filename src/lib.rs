@@ -1,5 +1,5 @@
 #[cfg(feature = "otp")]
-mod otp;
+pub mod otp;
 
 #[cfg(feature = "webauthn")]
-mod webauthn;
+pub mod webauthn;

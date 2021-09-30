@@ -54,8 +54,8 @@ impl Hotp {
 
 #[cfg(test)]
 mod tests_generate {
-    use crate::generate_secret;
-    use crate::hotp::Hotp;
+    use crate::otp::generate_secret;
+    use crate::otp::Hotp;
 
     #[test]
     fn test_generate_hotp_default() {
@@ -83,8 +83,8 @@ mod tests_generate {
 
 #[cfg(test)]
 mod tests_verify {
-    use crate::hotp::Hotp;
-    use crate::{digest, Algorithm};
+    use crate::otp::Hotp;
+    use crate::otp::{digest, Algorithm};
 
     #[test]
     fn test_verify() {
@@ -114,8 +114,7 @@ mod tests_verify {
 
 #[cfg(test)]
 mod test_builder_pattern {
-    use crate::hotp::Hotp;
-
+    use crate::otp::Hotp;
     #[test]
     fn test_builder_pattern_default() {
         let key = String::from("SuperSecretKey");

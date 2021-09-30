@@ -24,9 +24,9 @@ static DEFAULT_COSE_ALG_ID: [i32; 10] = [
     -65535,
 ];
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct AssertionOptions {
+pub struct AttestationOptions {
     rp_id: String,
     rp_name: String,
     user_id: String,
@@ -41,7 +41,7 @@ pub struct AssertionOptions {
     supported_algorithm_ids: Vec<i32>, // will have default
 }
 
-impl AssertionOptions {
+impl AttestationOptions {
     pub fn new(
         rp_id: String,
         rp_name: String,
@@ -49,7 +49,7 @@ impl AssertionOptions {
         user_id: String,
         user_name: String,
     ) -> Self {
-        AssertionOptions {
+        AttestationOptions {
             rp_id,
             rp_name,
             user_id,
@@ -110,7 +110,7 @@ impl AssertionOptions {
 }
 
 pub fn generate_attestation_options(
-    options: AssertionOptions,
+    options: AttestationOptions,
 ) -> PublicKeyCredentialCreationOptions {
     let mut exclude_credentials = None;
     let mut authenticator_selection = None;
@@ -172,9 +172,25 @@ pub fn generate_attestation_options(
 
 #[cfg(test)]
 mod test_generate_attestation_options {
+    // TODO(jayhelton) write more tests, obviously
+    use crate::webauthn::attestation::generate::{
+        generate_attestation_options, AttestationOptions,
+    };
+    use crate::webauthn::*;
 
     #[test]
-    fn test_default_option_generation() {}
+    fn test_generation() {
+        let options = AttestationOptions::new(
+            "example.com".to_string(),
+            "example".to_string(),
+            "asdfasdfasdfasdfasdfas".to_string(),
+            "somebytes".to_string(),
+            "someusername".to_string(),
+        );
+        let generated_options = generate_attestation_options(options);
+        let expected = get_mock_pub_key_cred();
+        assert_eq!(generated_options, expected);
+    }
 
     #[test]
     fn test_extenstions() {}
@@ -187,4 +203,73 @@ mod test_generate_attestation_options {
 
     #[test]
     fn test_timeout() {}
+
+    #[test]
+    fn test_require_resident_key() {}
+    fn get_mock_pub_key_cred() -> PublicKeyCredentialCreationOptions {
+        PublicKeyCredentialCreationOptions {
+            rp: PublicKeyCredentialRpEntity {
+                id: "example.com".to_string(),
+                name: "example".to_string(),
+            },
+            user: PublicKeyCredentialUserEntity {
+                id: "somebytes".to_string(),
+                display_name: None,
+                name: "someusername".to_string(),
+            },
+            challenge: "YXNkZmFzZGZhc2RmYXNkZmFzZGZhcw==".to_string(),
+            pub_key_cred_params: vec![
+                PublicKeyCredentialParameters {
+                    alg: -7,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -8,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -36,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -37,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -38,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -39,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -257,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -258,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -259,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+                PublicKeyCredentialParameters {
+                    alg: -65535,
+                    credential_type: PublicKeyCredentialType::PublicKey,
+                },
+            ],
+            exclude_credentials: Some(vec![]),
+            extensions: None,
+            attestation: Some(AttestationConveyancePreference::None),
+            authenticator_selection: Some(AuthenticatorSelectionCriteria {
+                authenticator_attachment: None,
+                require_resident_key: Some(false),
+                resident_key: None,
+                user_verification: Some(UserVerificationRequirement::Preferred),
+            }),
+            timeout: Some(60000),
+        }
+    }
 }
